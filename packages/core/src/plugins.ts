@@ -1,3 +1,4 @@
+import aidonPlugin from './plugins/aidon/index.js';
 import anthropicPlugin from './plugins/anthropic/index.js';
 import autoevalsPlugin from './plugins/autoevals/index.js';
 import assemblyAiPlugin from './plugins/assemblyAi/index.js';
@@ -8,6 +9,7 @@ import { openAIPlugin } from './plugins/openai/plugin.js';
 import { googlePlugin } from './plugins/google/plugin.js';
 
 export {
+	aidonPlugin,
   anthropicPlugin,
   autoevalsPlugin,
   assemblyAiPlugin,
@@ -18,6 +20,7 @@ export {
 };
 
 export const plugins = {
+	aidon: aidonPlugin,
   anthropic: anthropicPlugin,
   autoevals: autoevalsPlugin,
   assemblyAi: assemblyAiPlugin,

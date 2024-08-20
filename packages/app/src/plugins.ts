@@ -1,4 +1,5 @@
 import dedent from 'ts-dedent';
+import AidonLogo from './assets/vendor_logos/aidon-logo.png';
 import AnthropicLogo from './assets/vendor_logos/anthropic-logo.png';
 import AssemblyAiLogo from './assets/vendor_logos/assemblyAI-logo.png';
 import RivetLogo from './assets/vendor_logos/rivet-logo.png';
@@ -58,6 +59,19 @@ export const pluginInfos: PluginInfo[] = [
     tag: 'latest',
     logoImage: PythonLogo,
     github: 'https://github.com/abrenneke/rivet-plugin-example-python-exec',
+  },
+  {
+    type: 'built-in',
+    id: 'aidon',
+    name: 'Aidon',
+    description: dedent`
+      Allows you to chat with OpenAI LLM models with integrated tool execution.
+
+      Adds a Chat (Aidon) node.
+    `,
+    author: 'Aidon Team',
+    logoImage: AidonLogo,
+    documentation: 'https://rivet.ironcladapp.com/docs/user-guide/plugins/built-in/anthropic',
   },
   {
     type: 'built-in',
