@@ -618,7 +618,7 @@ export class GraphProcessor {
           .with({ type: 'finish' }, () => {
             this.#emitter.emit('finish', undefined);
           })
-          .with(undefined, () => {})
+//          .with(undefined, () => {})
           .exhaustive();
       }
     } catch (err) {
