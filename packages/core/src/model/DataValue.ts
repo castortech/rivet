@@ -46,7 +46,7 @@ export type AssistantChatMessage = {
 export type FunctionResponseChatMessage = {
   type: 'function';
   message: ChatMessageMessagePart | ChatMessageMessagePart[];
-  name: string;
+  name: string;  //use to return the 'tool_call_id' value
 };
 
 export type ChatMessage = SystemChatMessage | UserChatMessage | AssistantChatMessage | FunctionResponseChatMessage;
