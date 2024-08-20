@@ -75,6 +75,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-persisted-scope",
  "tauri-plugin-window-state",
+ "time",
 ]
 
 [[package]]

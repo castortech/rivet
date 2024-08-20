@@ -23,6 +23,10 @@ tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-works
 tar = "0.4.40"
 flate2 = "1.0.27"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
+# `time` is a dependency of a dependency but we need to specify it
+# for fixing rust-lang/rust#125319.
+time = { version = "0.3.36", default-features = false }
+
 
 [features]
 # by default Tauri runs in production mode
