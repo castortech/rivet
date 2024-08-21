@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "Rivet",
+    "productName": "Aidon Rivet",
     "version": "1.8.10"
   },
   "tauri": {
@@ -74,7 +74,7 @@
       },
       "externalBin": ["../../app-executor/dist/app-executor", "../sidecars/pnpm/pnpm"],
       "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
-      "identifier": "com.ironcladapp.rivet",
+      "identifier": "ai.aidon.rivet",
       "longDescription": "",
       "macOS": {
         "entitlements": "../entitlements.plist",
@@ -97,16 +97,16 @@
     },
     "updater": {
       "active": true,
-      "endpoints": ["https://github.com/Ironclad/rivet/releases/latest/download/latest.json"],
+      "endpoints": ["https://github.com/castortech/rivet/releases/latest/download/latest.json"],
       "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwRTgxNDEzODJDREJDNzkKUldSNXZNMkNFeFRvUU5VK0NXdEIwNlc3NTREUWpNSmpaeGFwWjFwc21ZT0U5cFlzcy81QndDOXYK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ5MUM0NzQ5ODc4RDZGQTUKUldTbGI0MkhTVWNjMlRKUm5JMzVDcGJRNUhyb3UzQ3I5M0t1Vzd4OEN6b3hkUjhRUndpOHRtZzEK"
     },
     "windows": [
       {
         "fullscreen": false,
         "height": 1024,
         "resizable": true,
-        "title": "Rivet",
+        "title": "Aidon Rivet",
         "width": 1200
       }
     ]
