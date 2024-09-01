@@ -39,7 +39,7 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx ./src"
   },
   "dependencies": {
-    "@ironclad/rivet-core": "workspace:^",
+    "@alpic80/rivet-core": "workspace:^",
     "lodash-es": "^4.17.21",
     "yaml": "^2.3.3"
   },

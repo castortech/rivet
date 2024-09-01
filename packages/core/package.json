@@ -1,8 +1,8 @@
 {
-  "name": "@ironclad/rivet-core",
+  "name": "@alpic80/rivet-core",
   "license": "MIT",
-  "repository": "https://github.com/ironclad/rivet",
-  "version": "1.19.1",
+  "repository": "https://github.com/castortech/rivet",
+  "version": "1.19.1-aidon.1",
   "packageManager": "yarn@3.5.0",
   "main": "dist/cjs/bundle.cjs",
   "module": "dist/esm/index.js",
@@ -38,7 +38,7 @@
     "build:esm": "rimraf dist/esm dist/types dist/tsconfig.tsbuildinfo && tsc -b --verbose",
     "build:cjs": "rimraf dist/cjs && tsx bundle.esbuild.ts",
     "prepack": "yarn build && cp -r ../../LICENSE ../../README.md .",
-    "publish": "yarn npm publish --access public",
+    "publish": "yarn npm publish",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx ./src",
     "test": "tsx --test test/**/*.test.ts",
     "watch": "tsc -b -w"

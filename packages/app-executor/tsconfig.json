@@ -10,7 +10,11 @@
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-    "importsNotUsedAsValues": "remove"
+    "importsNotUsedAsValues": "remove",
+		"baseUrl": ".",
+    "paths": {
+      "@ironclad/rivet-core": ["../core/dist/types/index.d.ts"]
+    }
   },
   "include": ["src", "bin", "scripts"],
   "ts-node": {

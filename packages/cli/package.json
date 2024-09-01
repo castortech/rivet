@@ -21,7 +21,7 @@
     "start": "yarn build && node bin/cli.js"
   },
   "dependencies": {
-    "@ironclad/rivet-node": "workspace:^",
+    "@alpic80/rivet-node": "workspace:^",
     "yargs": "^17.7.2"
   },
   "devDependencies": {

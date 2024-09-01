@@ -7,7 +7,11 @@
     "rootDir": "src",
     "declarationDir": "dist/types",
     "allowSyntheticDefaultImports": false,
-    "esModuleInterop": false
+    "esModuleInterop": false,
+		"baseUrl": ".",
+    "paths": {
+      "@ironclad/rivet-core": ["../core/dist/types/index.d.ts"]
+    }
   },
   "include": ["src", "bin"],
   "references": [{ "path": "../core" }, { "path": "../node" }]

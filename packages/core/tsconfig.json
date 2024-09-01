@@ -5,9 +5,10 @@
     "moduleResolution": "NodeNext",
     "outDir": "dist/esm",
     "rootDir": "src",
+ 		"declaration": true,
     "declarationDir": "dist/types",
     "allowSyntheticDefaultImports": false,
-    "esModuleInterop": false
+    "esModuleInterop": false,
   },
   "include": ["src"],
   "ts-node": {
