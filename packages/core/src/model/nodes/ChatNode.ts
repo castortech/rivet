@@ -917,6 +917,8 @@ export class ChatNodeImpl extends NodeImpl<ChatNode> {
           }
 
           const startTime = Date.now();
+					let usagePromptTokens = -1;
+					let usageCompletionTokens = -1;
 
           const chunks = streamChatCompletions({
             auth: {
@@ -945,6 +947,11 @@ export class ChatNodeImpl extends NodeImpl<ChatNode> {
               // Could be error for some reason 🤷‍♂️ but ignoring has worked for me so far.
               continue;
             }
+
+						if (chunk.choices.length == 0 && chunk.usage) {  //capture the usage info
+							usagePromptTokens = chunk.usage.prompt_tokens;
+							usageCompletionTokens = chunk.usage.completion_tokens;
+						}
 
             for (const { delta, index } of chunk.choices) {
               if (delta.content != null) {
@@ -1059,14 +1066,26 @@ export class ChatNodeImpl extends NodeImpl<ChatNode> {
           }
 
           output['in-messages' as PortId] = { type: 'chat-message[]', value: messages };
-          output['requestTokens' as PortId] = { type: 'number', value: tokenCount * (numberOfChoices ?? 1) };
+					
+					let finalTokenCount = tokenCount * (numberOfChoices ?? 1);
+					let responseTokenCount = 0;
+					for (const choiceParts of responseChoicesParts) {
+						responseTokenCount += await context.tokenizer.getTokenCountForString(choiceParts.join(''), tokenizerInfo);
+					}
 
-          let responseTokenCount = 0;
-          for (const choiceParts of responseChoicesParts) {
-            responseTokenCount += await context.tokenizer.getTokenCountForString(choiceParts.join(), tokenizerInfo);
-          }
+					if (usagePromptTokens != -1 && usageCompletionTokens != -1) {
+						if (finalTokenCount != usagePromptTokens) {
+							console.log(`calculated token count:${finalTokenCount}, usage:${usagePromptTokens}`);
+							finalTokenCount = usagePromptTokens;
+						}
+						if (responseTokenCount != usageCompletionTokens) {
+							console.log(`calculated response token count:${responseTokenCount}, usage:${usageCompletionTokens}`);
+							responseTokenCount = usageCompletionTokens;
+						}
+					}
 
-          output['responseTokens' as PortId] = { type: 'number', value: responseTokenCount };
+					output['requestTokens' as PortId] = { type: 'number', value: finalTokenCount };
+					output['responseTokens' as PortId] = { type: 'number', value: responseTokenCount };
 
           const promptCostPerThousand =
             model in openaiModels ? openaiModels[model as keyof typeof openaiModels].cost.prompt : 0;

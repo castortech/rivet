@@ -370,6 +370,7 @@ export type ChatCompletionChunk = {
   created: number;
   model: string;
   choices?: ChatCompletionChunkChoice[];
+	usage?: CompletionUsage;
 };
 
 export type GptFunctionCall = {
@@ -380,6 +381,12 @@ export type GptFunctionCall = {
 export type GptFunctionCallDelta = {
   name?: string;
   arguments?: string;
+};
+
+export interface CompletionUsage {
+  completion_tokens: number;
+  prompt_tokens: number;
+  total_tokens: number;
 };
 
 export type ChatCompletionChunkChoice = {
@@ -436,7 +443,10 @@ export async function* streamChatCompletions({
       },
       body: JSON.stringify({
         ...rest,
-        stream: true,
+				stream: true,
+        stream_options : {
+   			 "include_usage": true
+  			},
       }),
       signal: abortSignal,
     },
