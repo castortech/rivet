@@ -227,7 +227,9 @@ export class GraphProcessor {
   #aborted = false;
   #abortSuccessfully = false;
   #abortError: Error | string | undefined = undefined;
-  #totalCost: number = 0;
+  #totalRequestTokens: number = 0;
+  #totalResponseTokens: number = 0;
+	#totalCost: number = 0;
   #ignoreNodes: Set<NodeId> = undefined!;
 
   #nodeAbortControllers = new Map<`${NodeId}-${ProcessId}`, AbortController>();
@@ -746,6 +748,20 @@ export class GraphProcessor {
         throw error;
       }
 
+	    if (this.#graphOutputs['requestTokens' as PortId] == null) {
+        this.#graphOutputs['requestTokens' as PortId] = {
+          type: 'number',
+          value: this.#totalRequestTokens,
+        };
+      }
+
+	    if (this.#graphOutputs['responseTokens' as PortId] == null) {
+        this.#graphOutputs['responseTokens' as PortId] = {
+          type: 'number',
+          value: this.#totalResponseTokens,
+        };
+      }
+
       if (this.#graphOutputs['cost' as PortId] == null) {
         this.#graphOutputs['cost' as PortId] = {
           type: 'number',
@@ -1209,6 +1225,12 @@ export class GraphProcessor {
                 this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId }),
             );
 
+            if (output['requestTokens' as PortId]?.type === 'number') {
+              this.#totalRequestTokens += coerceTypeOptional(output['requestTokens' as PortId], 'number') ?? 0;
+            }
+            if (output['responseTokens' as PortId]?.type === 'number') {
+              this.#totalResponseTokens += coerceTypeOptional(output['responseTokens' as PortId], 'number') ?? 0;
+            }
             if (output['cost' as PortId]?.type === 'number') {
               this.#totalCost += coerceTypeOptional(output['cost' as PortId], 'number') ?? 0;
             }
@@ -1237,6 +1259,12 @@ export class GraphProcessor {
                   this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId }),
               );
 
+							if (output['requestTokens' as PortId]?.type === 'number') {
+								this.#totalRequestTokens += coerceTypeOptional(output['requestTokens' as PortId], 'number') ?? 0;
+							}
+							if (output['responseTokens' as PortId]?.type === 'number') {
+								this.#totalResponseTokens += coerceTypeOptional(output['responseTokens' as PortId], 'number') ?? 0;
+							}
               if (output['cost' as PortId]?.type === 'number') {
                 this.#totalCost += coerceTypeOptional(output['cost' as PortId], 'number') ?? 0;
               }
@@ -1269,6 +1297,9 @@ export class GraphProcessor {
 
       this.#nodeResults.set(node.id, aggregateResults);
       this.#visitedNodes.add(node.id);
+
+      this.#totalRequestTokens += sum(results.map((r) => coerceTypeOptional(r.output?.['requestTokens' as PortId], 'number') ?? 0));
+      this.#totalResponseTokens += sum(results.map((r) => coerceTypeOptional(r.output?.['responseTokens' as PortId], 'number') ?? 0));
       this.#totalCost += sum(results.map((r) => coerceTypeOptional(r.output?.['cost' as PortId], 'number') ?? 0));
       this.#emitter.emit('nodeFinish', { node, outputs: aggregateResults, processId });
     } catch (error) {
@@ -1297,6 +1328,13 @@ export class GraphProcessor {
 
       this.#nodeResults.set(node.id, outputValues);
       this.#visitedNodes.add(node.id);
+
+			if (outputValues['requestTokens' as PortId]?.type === 'number') {
+				this.#totalRequestTokens += coerceTypeOptional(outputValues['requestTokens' as PortId], 'number') ?? 0;
+			}
+			if (outputValues['responseTokens' as PortId]?.type === 'number') {
+				this.#totalResponseTokens += coerceTypeOptional(outputValues['responseTokens' as PortId], 'number') ?? 0;
+			}
       if (outputValues['cost' as PortId]?.type === 'number') {
         this.#totalCost += coerceTypeOptional(outputValues['cost' as PortId], 'number') ?? 0;
       }
