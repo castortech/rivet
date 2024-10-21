@@ -152,6 +152,9 @@ export * from './nodes/ShuffleNode.js';
 import { commentNode } from './nodes/CommentNode.js';
 export * from './nodes/CommentNode.js';
 
+import { imageToMDNode } from './nodes/ImageToMDNode.js';
+export * from './nodes/ImageToMDNode.js';
+
 import { imageNode } from './nodes/ImageNode.js';
 export * from './nodes/ImageNode.js';
 
@@ -272,6 +275,7 @@ export const registerBuiltInNodes = (registry: NodeRegistration) => {
     .register(randomNumberNode)
     .register(shuffleNode)
     .register(commentNode)
+		.register(imageToMDNode)
     .register(imageNode)
     .register(audioNode)
     .register(httpCallNode)

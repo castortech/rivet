@@ -53,6 +53,7 @@ import commentNodeImage from '../assets/node_images/comment_node.png';
 import objectNodeImage from '../assets/node_images/object_node.png';
 import audioNodeImage from '../assets/node_images/audio_node.png';
 import imageNodeImage from '../assets/node_images/image_node.png';
+//import imageToMDImage from '../assets/node_images/image_node.png';
 import httpCallNodeImage from '../assets/node_images/http_call_node.png';
 import appendToDatasetNodeImage from '../assets/node_images/append_to_dataset_node.png';
 import createDatasetNodeImage from '../assets/node_images/create_dataset_node.png';
@@ -128,6 +129,7 @@ export const useBuiltInNodeImages = (): Record<BuiltInNodeType, string> => {
     object: objectNodeImage,
     audio: audioNodeImage,
     image: imageNodeImage,
+    imagetoMD: imageNodeImage,
     httpCall: httpCallNodeImage,
     appendToDataset: appendToDatasetNodeImage,
     createDataset: createDatasetNodeImage,
