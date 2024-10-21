@@ -2,7 +2,7 @@
   "name": "@alpic80/rivet-core",
   "license": "MIT",
   "repository": "https://github.com/castortech/rivet",
-  "version": "1.19.1-aidon.2",
+  "version": "1.19.1-aidon.3",
   "packageManager": "yarn@3.5.0",
   "main": "dist/cjs/bundle.cjs",
   "module": "dist/esm/index.js",
