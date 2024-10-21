@@ -265,7 +265,7 @@ const createPluginNodeImpl = (chatNode: ChartNode): PluginNodeImpl<ChatAidonNode
 			impl.chartNode.data = data  // Ensure data is set correctly in the base class
 			const outputs: NodeOutputDefinition[] = impl.getOutputDefinitions()
 			return outputs.filter(output => {
-				return !(output.id === 'function-calls');
+				return output.id !== 'function-calls';
 			});
 		},
 		getEditors(data: ChatNodeData): EditorDefinition<ChatNode>[] {
