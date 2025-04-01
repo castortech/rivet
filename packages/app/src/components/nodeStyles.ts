@@ -269,7 +269,7 @@ export const nodeStyles = css`
     margin: 0 4px;
     white-space: nowrap;
     user-select: none;
-    opacity: 0.5;
+    opacity: 0.75;
     cursor: default;
   }
 

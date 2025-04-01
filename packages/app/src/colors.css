@@ -176,3 +176,37 @@
   /* Gradient */
   --grey-subtle-accent: rgba(165, 95, 255, 0.02);
 }
+
+.app.theme-light {
+  /* Primary colors */
+  --primary: #ff7b6c;
+  --primary-text: #fa5542;
+  --primary-dark: #cc6600;
+  --primary-light: #ffb545;
+  --primary-5percent: rgba(255, 153, 0, 0.05);
+
+  --shadow-primary: rgba(255, 153, 0, 0.3);
+  --shadow-primary-bright: rgba(31, 19, 6, 0.8);
+
+  /* Greyscale colors */
+  --grey-darkest: #f8f9fa;
+  --grey-darker: #e9ecef;
+  --grey-darkerish: #dee2e6;
+  --grey-dark: #ced4da;
+  --grey-dark-seethrough: rgba(250, 250, 250, 0.84);
+  --grey-dark-seethrougher: rgba(206, 212, 218, 0.35);
+  --grey-dark-bluish-seethrough: rgba(255, 255, 255, 0.91);
+  --grey-darkish: #adb5bd;
+
+  --grey-darkish-seethrough: rgba(173, 181, 189, 0.5);
+  --grey: #868e96;
+  --grey-lightish: #495057;
+  --grey-light: #343a40;
+  --grey-light-seethrough: rgba(52, 58, 64, 0.5);
+  --grey-lighter: #212529;
+  --grey-lightest: #000;
+  --foreground: #1e1e1e;
+  --foreground-bright: #000;
+  --foreground-muted: #6c757d;
+  --foreground-on-primary: #f8f9fa;
+}

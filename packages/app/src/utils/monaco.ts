@@ -17,7 +17,7 @@ monaco.languages.setMonarchTokensProvider('prompt-interpolation-markdown', promp
 
 const definePITheme = (name: string, colors: { primary: string }) =>
   monaco.editor.defineTheme(`prompt-interpolation-${name}`, {
-    base: 'vs-dark',
+    base: name === 'light' ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [{ token: 'prompt-replacement', foreground: colors.primary }],
     colors: {
@@ -28,3 +28,4 @@ const definePITheme = (name: string, colors: { primary: string }) =>
 definePITheme('molten', { primary: 'ff9900' });
 definePITheme('grapefruit', { primary: 'ff8862' });
 definePITheme('taffy', { primary: 'd6c2ff' });
+definePITheme('light', { primary: 'ff7b6c' });

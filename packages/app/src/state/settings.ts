@@ -33,6 +33,10 @@ export const themes = [
     label: 'Taffy',
     value: 'taffy',
   },
+  {
+    label: 'Light',
+    value: 'light',
+  },
 ] as const;
 
 export type Theme = (typeof themes)[number]['value'];

@@ -63,6 +63,12 @@ export const RivetApp: FC = () => {
     await checkForUpdate();
   }, []);
 
+  useEffect(() => {
+    setGlobalTheme({
+      colorMode: theme === 'light' ? 'light' : 'dark'
+    });
+  }, [theme]);
+
   useMonitorUpdateStatus();
   useWindowTitle();
 
