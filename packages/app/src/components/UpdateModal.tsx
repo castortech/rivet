@@ -78,7 +78,7 @@ export const UpdateModal: FC = () => {
         <ModalBody>
           <div css={bodyStyle}>
             <p>
-              A new version <strong>{latestVersion}</strong> of Rivet is available. You are on currently on version{' '}
+              A new version <strong>{latestVersion}</strong> of Aidon Rivet is available. You are on currently on version{' '}
               <strong>{currentVersion}</strong>. Would you like to install it now?
             </p>
             <h4>Update Notes:</h4>
