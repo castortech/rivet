@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "Aidon Rivet",
-    "version": "1.8.12"
+    "version": "1.8.13"
   },
   "tauri": {
     "allowlist": {
