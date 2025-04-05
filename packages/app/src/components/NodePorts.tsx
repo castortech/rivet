@@ -6,6 +6,7 @@ import {
   type PortId,
   type NodeOutputDefinition,
   type DataType,
+  isBuiltInInputDefinition,
 } from '@ironclad/rivet-core';
 import { type FC, type MouseEvent } from 'react';
 import { useNodeIO } from '../hooks/useGetNodeIO.js';
@@ -15,7 +16,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useDependsOnPlugins } from '../hooks/useDependsOnPlugins';
 import { LoopControllerNodePorts } from './LoopControllerNodePorts';
 import { type DraggingWireDef } from '../state/graphBuilder';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { preservePortTextCaseState } from '../state/settings.js';
 
 export type NodePortsProps = {
@@ -66,7 +67,9 @@ export const NodePorts: FC<NodePortsProps> = ({
   onPortMouseOut,
 }) => {
   const { inputDefinitions, outputDefinitions } = useNodeIO(node.id)!;
-  const preservePortTextCase = useRecoilValue(preservePortTextCaseState);
+  const preservePortTextCase = useAtomValue(preservePortTextCaseState);
+
+  const renderedInputDefinitions = inputDefinitions.filter((input) => !isBuiltInInputDefinition(input));
 
   const handlePortMouseDown = useStableCallback((event: MouseEvent<HTMLDivElement>, port: PortId, isInput: boolean) => {
     event.stopPropagation();
@@ -83,7 +86,7 @@ export const NodePorts: FC<NodePortsProps> = ({
   return (
     <div className="node-ports">
       <div className="input-ports">
-        {inputDefinitions.map((input) => {
+        {renderedInputDefinitions.map((input) => {
           const connected =
             connections.some((conn) => conn.inputNodeId === node.id && conn.inputId === input.id) ||
             (draggingWire?.endNodeId === node.id && draggingWire?.endPortId === input.id);

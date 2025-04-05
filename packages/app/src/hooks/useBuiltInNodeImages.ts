@@ -73,6 +73,14 @@ import graphReferenceNodeImage from '../assets/node_images/graph_reference_node.
 import callGraphNodeImage from '../assets/node_images/call_graph_node.png';
 import delegateFunctionCallNodeImage from '../assets/node_images/delegate_function_call_node.png';
 import playAudioNodeImage from '../assets/node_images/play_audio_node.png';
+import documentNodeImage from '../assets/node_images/document_node.png';
+import readAllFilesNodeImage from '../assets/node_images/read_all_files_node.png';
+import chatLoopNodeImage from '../assets/node_images/chat_loop_node.png';
+import toMarkdownTableNodeImage from '../assets/node_images/to_markdown_table_node.png';
+import cronNodeImage from '../assets/node_images/cron_node.png';
+import loopUntilNodeImage from '../assets/node_images/loop_until_node.png';
+import toTreeNode from '../assets/node_images/to_tree_node.png';
+import libraryNode from '../assets/node_images/library_node.png';
 
 export const useBuiltInNodeImages = (): Record<BuiltInNodeType, string> => {
   return {
@@ -149,5 +157,13 @@ export const useBuiltInNodeImages = (): Record<BuiltInNodeType, string> => {
     callGraph: callGraphNodeImage,
     delegateFunctionCall: delegateFunctionCallNodeImage,
     playAudio: playAudioNodeImage,
+    document: documentNodeImage,
+    readAllFiles: readAllFilesNodeImage,
+    chatLoop: chatLoopNodeImage,
+    toMarkdownTable: toMarkdownTableNodeImage,
+    cron: cronNodeImage,
+    loopUntil: loopUntilNodeImage,
+    toTree: toTreeNode,
+    referencedGraphAlias: libraryNode,
   };
 };

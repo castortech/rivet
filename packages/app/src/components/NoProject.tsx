@@ -5,10 +5,11 @@ import { useOpenUrl } from '../hooks/useOpenUrl';
 import DiscordIcon from '../assets/vendor_logos/discord-mark-white.svg?react';
 import GearIcon from 'majesticons/line/settings-cog-line.svg?react';
 import RivetIcon from '../rivet-logo-1024-full.png';
-import { useSetRecoilState } from 'recoil';
+import { useSetAtom } from 'jotai';
 import { newProjectModalOpenState } from '../state/ui';
 import { settingsModalOpenState } from './SettingsModal';
 import { useLoadProjectWithFileBrowser } from '../hooks/useLoadProjectWithFileBrowser';
+import { syncWrapper } from '../utils/syncWrapper';
 
 const styles = css`
   background: var(--grey-darker);
@@ -82,8 +83,8 @@ const styles = css`
 export const NoProject: FC = () => {
   const openDocumentation = useOpenUrl('https://rivet.ironcladapp.com/docs');
   const joinDiscord = useOpenUrl('https://discord.gg/qT8B2gv9Mg');
-  const setNewProjectModalOpen = useSetRecoilState(newProjectModalOpenState);
-  const setSettingsModalOpen = useSetRecoilState(settingsModalOpenState);
+  const setNewProjectModalOpen = useSetAtom(newProjectModalOpenState);
+  const setSettingsModalOpen = useSetAtom(settingsModalOpenState);
   const openProject = useLoadProjectWithFileBrowser();
 
   return (
@@ -98,7 +99,7 @@ export const NoProject: FC = () => {
 
         <ul>
           <li>
-            <Button appearance="primary" onClick={openProject}>
+            <Button appearance="primary" onClick={syncWrapper(openProject)}>
               Open
             </Button>{' '}
             an existing project
@@ -112,7 +113,7 @@ export const NoProject: FC = () => {
           <li>
             <p>
               Check out the{' '}
-              <a href="#" onClick={openDocumentation}>
+              <a href="#" onClick={syncWrapper(openDocumentation)}>
                 Rivet documentation
               </a>
             </p>
@@ -120,7 +121,7 @@ export const NoProject: FC = () => {
           <li>
             <p>
               Need help? join the{' '}
-              <a href="#" onClick={joinDiscord}>
+              <a href="#" onClick={syncWrapper(joinDiscord)}>
                 <DiscordIcon /> Discord Server
               </a>{' '}
               for ideas, support, and community

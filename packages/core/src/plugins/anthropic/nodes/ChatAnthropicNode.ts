@@ -1,5 +1,4 @@
 import {
-  uint8ArrayToBase64,
   type ChartNode,
   type ChatMessage,
   type EditorDefinition,
@@ -26,8 +25,9 @@ import {
   type Claude3ChatMessageContentPart,
   streamMessageApi,
   type ChatMessageOptions,
-  callMessageApi,
   type Claude3ChatMessageTextContentPart,
+  type SystemPrompt,
+  type ChatMessageCitation,
 	type Claude3ChatMessageToolResultContentPart,
 } from '../anthropic.js';
 import { nanoid } from 'nanoid/non-secure';
@@ -42,6 +42,8 @@ import { getScalarTypeOf, isArrayDataValue } from '../../../model/DataValue.js';
 import type { TokenizerCallInfo } from '../../../integrations/Tokenizer.js';
 import { assertNever } from '../../../utils/assertNever.js';
 import { isNotNull } from '../../../utils/genericUtilFunctions.js';
+import { uint8ArrayToBase64 } from '../../../utils/base64.js';
+import { getInputOrData } from '../../../utils/inputs.js';
 
 export type ChatAnthropicNode = ChartNode<'chatAnthropic', ChatAnthropicNodeData>;
 
@@ -54,6 +56,9 @@ export type ChatAnthropicNodeConfigData = {
   maxTokens: number;
   stop?: string;
   enableToolUse?: boolean;
+  endpoint?: string;
+  overrideModel?: string;
+  enableCitations?: boolean;
 };
 
 export type ChatAnthropicNodeData = ChatAnthropicNodeConfigData & {
@@ -65,6 +70,8 @@ export type ChatAnthropicNodeData = ChatAnthropicNodeConfigData & {
   useMaxTokensInput: boolean;
   useStop: boolean;
   useStopInput: boolean;
+  useEndpointInput: boolean;
+  useOverrideModelInput: boolean;
 
   /** Given the same set of inputs, return the same output without hitting GPT */
   cache: boolean;
@@ -87,7 +94,7 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
         width: 275,
       },
       data: {
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-3-7-sonnet-latest',
         useModelInput: false,
 
         temperature: 0.5,
@@ -113,6 +120,14 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
         useAsGraphPartialOutput: true,
 
         enableToolUse: false,
+
+        endpoint: '',
+        useEndpointInput: false,
+
+        overrideModel: undefined,
+        useOverrideModelInput: false,
+
+        enableCitations: false,
       },
     };
 
@@ -207,12 +222,21 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
       title: 'Response',
     });
 
+    if (data.enableCitations) {
+      outputs.push({
+        dataType: 'object[]',
+        id: 'citations' as PortId,
+        title: 'Citations',
+        description: 'Citations from the response, if any.',
+      });
+    }
+
     if (data.enableToolUse) {
       outputs.push({
         dataType: 'object[]',
         id: 'function-calls' as PortId,
-        title: 'Function Calls',
-        description: 'The function calls that were made, if any.',
+        title: 'Tool Calls',
+        description: 'The tool calls that were made, if any.',
       });
     }
 
@@ -227,7 +251,10 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
   },
 
   getBody(data): string {
-    const modelName = anthropicModels[data.model]?.displayName ?? 'Unknown Model';
+    const modelName = data.overrideModel
+      ? data.overrideModel
+      : anthropicModels[data.model]?.displayName ?? 'Unknown Model';
+
     return dedent`
       ${modelName}
       ${
@@ -243,65 +270,106 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
   getEditors(): EditorDefinition<ChatAnthropicNode>[] {
     return [
       {
-        type: 'dropdown',
-        label: 'Model',
-        dataKey: 'model',
-        useInputToggleDataKey: 'useModelInput',
-        options: anthropicModelOptions,
+        type: 'group',
+        label: 'Parameters',
+        defaultOpen: true,
+        editors: [
+          {
+            type: 'dropdown',
+            label: 'Model',
+            dataKey: 'model',
+            useInputToggleDataKey: 'useModelInput',
+            options: anthropicModelOptions,
+            disableIf: (d) => !!d.overrideModel?.trim(),
+            helperMessage: (d) => (!!d.overrideModel ? `Model is overridden to: ${d.overrideModel}` : ''),
+          },
+          {
+            type: 'number',
+            label: 'Temperature',
+            dataKey: 'temperature',
+            useInputToggleDataKey: 'useTemperatureInput',
+            min: 0,
+            max: 2,
+            step: 0.1,
+          },
+          {
+            type: 'number',
+            label: 'Top P',
+            dataKey: 'top_p',
+            useInputToggleDataKey: 'useTopPInput',
+            min: 0,
+            max: 1,
+            step: 0.1,
+          },
+          {
+            type: 'toggle',
+            label: 'Use Top P',
+            dataKey: 'useTopP',
+            useInputToggleDataKey: 'useUseTopPInput',
+          },
+          {
+            type: 'number',
+            label: 'Max Tokens',
+            dataKey: 'maxTokens',
+            useInputToggleDataKey: 'useMaxTokensInput',
+            min: 0,
+            max: Number.MAX_SAFE_INTEGER,
+            step: 1,
+          },
+          {
+            type: 'string',
+            label: 'Stop',
+            dataKey: 'stop',
+            useInputToggleDataKey: 'useStopInput',
+          },
+        ],
       },
       {
-        type: 'number',
-        label: 'Temperature',
-        dataKey: 'temperature',
-        useInputToggleDataKey: 'useTemperatureInput',
-        min: 0,
-        max: 2,
-        step: 0.1,
+        type: 'group',
+        label: 'Tools',
+        editors: [
+          {
+            type: 'toggle',
+            label: 'Enable Tool Use (disables streaming)',
+            dataKey: 'enableToolUse',
+          },
+          {
+            type: 'toggle',
+            label: 'Enable Citations',
+            dataKey: 'enableCitations',
+          },
+        ],
       },
       {
-        type: 'number',
-        label: 'Top P',
-        dataKey: 'top_p',
-        useInputToggleDataKey: 'useTopPInput',
-        min: 0,
-        max: 1,
-        step: 0.1,
-      },
-      {
-        type: 'toggle',
-        label: 'Use Top P',
-        dataKey: 'useTopP',
-        useInputToggleDataKey: 'useUseTopPInput',
-      },
-      {
-        type: 'number',
-        label: 'Max Tokens',
-        dataKey: 'maxTokens',
-        useInputToggleDataKey: 'useMaxTokensInput',
-        min: 0,
-        max: Number.MAX_SAFE_INTEGER,
-        step: 1,
-      },
-      {
-        type: 'string',
-        label: 'Stop',
-        dataKey: 'stop',
-        useInputToggleDataKey: 'useStopInput',
-      },
-      {
-        type: 'toggle',
-        label: 'Cache (same inputs, same outputs)',
-        dataKey: 'cache',
-      },
-      {
-        type: 'toggle',
-        label: 'Use for subgraph partial output',
-        dataKey: 'useAsGraphPartialOutput',
-      },
-      {
-        type: 'toggle',
-        label: 'Enable Tool Use (disables streaming)',
-        dataKey: 'enableToolUse',
+        type: 'group',
+        label: 'Advanced',
+        editors: [
+          {
+            type: 'toggle',
+            label: 'Cache (same inputs, same outputs)',
+            dataKey: 'cache',
+          },
+          {
+            type: 'toggle',
+            label: 'Use for subgraph partial output',
+            dataKey: 'useAsGraphPartialOutput',
+          },
+          {
+            type: 'string',
+            label: 'Endpoint',
+            dataKey: 'endpoint',
+            useInputToggleDataKey: 'useEndpointInput',
+            helperMessage:
+              'Overrides the Anthropic API endpoint. Leave blank to use the default configured endpoint in settings, or https://api.anthropic.com/v1 if none is configured.',
+          },
+          {
+            type: 'string',
+            label: 'Override Model',
+            dataKey: 'overrideModel',
+            useInputToggleDataKey: 'useOverrideModelInput',
+            helperMessage: 'Overrides the AI model used for the chat node to this value.',
+          },
+        ],
       },
     ];
   },
@@ -318,15 +386,12 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
   },
 
   async process(data, inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
-    if (context.executor === 'browser') {
-      throw new Error('This node requires using the Node executor');
-    }
-
     const output: Outputs = {};
-    const rawModel = data.useModelInput
-      ? coerceTypeOptional(inputs['model' as PortId], 'string') ?? data.model
-      : data.model;
-    const model = rawModel as AnthropicModels;
+    const rawModel = getInputOrData(data, inputs, 'model');
+    const overrideModel = getInputOrData(data, inputs, 'overrideModel');
+
+    const model = (overrideModel || rawModel) as AnthropicModels;
+
     const temperature = data.useTemperatureInput
       ? coerceTypeOptional(inputs['temperature' as PortId], 'number') ?? data.temperature
       : data.temperature;
@@ -342,8 +407,10 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
     const tools = data.enableToolUse
       ? coerceTypeOptional(inputs['tools' as PortId], 'gpt-function[]') ?? []
       : undefined;
+
     const rivetChatMessages = getChatMessages(inputs);
     const messages = await chatMessagesToClaude3ChatMessages(rivetChatMessages);
+
     let prompt = messages.reduce((acc, message) => {
       const content =
         typeof message.content === 'string'
@@ -364,12 +431,18 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
     // Get the "System" prompt input for Claude 3 models
     const system = data.model.startsWith('claude-3') ? getSystemPrompt(inputs) : undefined;
 
+    const systemInput = inputs['system' as PortId];
+    const includesCacheBreakpoint =
+      rivetChatMessages.some((m) => m.isCacheBreakpoint) ||
+      (systemInput?.type === 'chat-message' && systemInput.value.isCacheBreakpoint);
+
     let { maxTokens } = data;
     const tokenizerInfo: TokenizerCallInfo = {
       node: context.node,
       model,
       endpoint: undefined,
     };
+
     const tokenCountEstimate = await context.tokenizer.getTokenCountForString(prompt, tokenizerInfo);
     const modelInfo = anthropicModels[model] ?? {
       maxTokens: Number.MAX_SAFE_INTEGER,
@@ -378,11 +451,13 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
         completion: 0,
       },
     };
+
     if (tokenCountEstimate >= modelInfo.maxTokens) {
       throw new Error(
         `The model ${model} can only handle ${modelInfo.maxTokens} tokens, but ${tokenCountEstimate} were provided in the prompts alone.`,
       );
     }
+
     if (tokenCountEstimate + maxTokens > modelInfo.maxTokens) {
       const message = `The model can only handle a maximum of ${
         modelInfo.maxTokens
@@ -392,10 +467,11 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
       addWarning(output, message);
       maxTokens = Math.floor((modelInfo.maxTokens - tokenCountEstimate) * 0.95); // reduce max tokens by 5% to be safe, calculation is a little wrong.
     }
+
     try {
       return await retry(
         async () => {
-          const completionOptions: Omit<ChatCompletionOptions, 'apiKey' | 'signal'> = {
+          const completionOptions: Omit<ChatCompletionOptions, 'apiKey' | 'apiEndpoint' | 'signal'> = {
             model,
             temperature: useTopP ? undefined : temperature,
             top_p: useTopP ? topP : undefined,
@@ -403,13 +479,13 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
             stop_sequences: stop ? [stop] : undefined,
             prompt,
           };
-          const messageOptions: Omit<ChatMessageOptions, 'apiKey' | 'signal'> = {
+          const messageOptions: Omit<ChatMessageOptions, 'apiKey' | 'apiEndpoint' | 'signal'> = {
             model,
             temperature: useTopP ? undefined : temperature,
             top_p: useTopP ? topP : undefined,
             max_tokens: maxTokens ?? modelInfo.maxTokens,
             stop_sequences: stop ? [stop] : undefined,
-            system: system,
+            system,
             messages,
             tools: tools
               ? tools.map((tool) => ({ name: tool.name, description: tool.description, input_schema: tool.parameters }))
@@ -426,95 +502,130 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
 
           const startTime = Date.now();
           const apiKey = context.getPluginConfig('anthropicApiKey');
+          const defaultApiEndpoint = context.getPluginConfig('anthropicApiEndpoint') || 'https://api.anthropic.com/v1';
 
-          if (useMessageApi && data.enableToolUse) {
-            // Streaming is not supported with tool usage.
-            const response = await callMessageApi({
-              apiKey: apiKey ?? '',
-              ...messageOptions,
-            });
-            const { input_tokens: requestTokens, output_tokens: responseTokens } = response.usage;
-            const responseText = response.content
-              .map((c): string | undefined => (c as any).text)
-              .filter(isNotNull)
-              .join('');
-            output['response' as PortId] = {
-              type: 'string',
-              value: responseText,
-            };
-            const functionCalls = response.content
-              .filter((content) => (content as any).name && (content as any).id)
-              .map((functionCall: any) => ({
-                name: functionCall.name,
-                arguments: functionCall.input, // Matches OpenAI ChatNode
-                id: functionCall.id,
-              }));
+          const configuredEndpoint = getInputOrData(data, inputs, 'endpoint');
 
-            if (functionCalls.length > 0) {
-              output['function-calls' as PortId] = {
-                type: 'object[]',
-                value: functionCalls,
-              };
-            }
+          const apiEndpoint = configuredEndpoint?.trim() ? configuredEndpoint : defaultApiEndpoint;
 
-            output['all-messages' as PortId] = {
-              type: 'chat-message[]',
-              value: [
-                ...rivetChatMessages,
-                {
-                  type: 'assistant',
-                  message: responseText,
-                  function_call:
-                    functionCalls.length > 0
-                      ? functionCalls.map((toolCall) => ({
-                          name: toolCall.name,
-                          arguments: JSON.stringify(toolCall.arguments),
-                          id: toolCall.id,
-                        }))[0]
-                      : undefined,
-                  function_calls: functionCalls.map((toolCall) => ({
-                    name: toolCall.name,
-                    arguments: JSON.stringify(toolCall.arguments),
-                    id: toolCall.id,
-                  })),
-                } satisfies ChatMessage,
-              ],
-            };
-            output['requestTokens' as PortId] = { type: 'number', value: requestTokens ?? tokenCountEstimate };
-            const responseTokenCount =
-              responseTokens ?? context.tokenizer.getTokenCountForString(responseText, tokenizerInfo);
-            output['responseTokens' as PortId] = { type: 'number', value: responseTokenCount };
-          } else if (useMessageApi) {
+          if (useMessageApi) {
             // Use the messages API for Claude 3 models
             const chunks = streamMessageApi({
+              apiEndpoint,
               apiKey: apiKey ?? '',
               signal: context.signal,
+              beta: 'prompt-caching-2024-07-31',
               ...messageOptions,
             });
 
             // Process the response chunks and update the output
             const responseParts: string[] = [];
-            let requestTokens: number | undefined = undefined,
-              responseTokens: number | undefined = undefined;
+            let requestTokens: number | undefined = undefined;
+            let responseTokens: number | undefined = undefined;
+            const citations: ChatMessageCitation[] = [];
+
+            type ToolCall = {
+              id: string;
+              name: string;
+              input: object;
+            };
+
+            // Track tool calls
+            const toolCalls: ToolCall[] = [];
+            let currentToolCall: ToolCall | null = null;
+            let accumulatedJsonString = '';
+
             for await (const chunk of chunks) {
               let completion: string = '';
+
               if (chunk.type === 'content_block_start') {
-                completion = chunk.content_block.text;
+                if (chunk.content_block.type === 'text') {
+                  completion = chunk.content_block.text || '';
+                } else if (chunk.content_block.type === 'tool_use') {
+                  currentToolCall = {
+                    id: chunk.content_block.id,
+                    name: chunk.content_block.name,
+                    input: chunk.content_block.input || {},
+                  };
+                  accumulatedJsonString = '';
+                }
               } else if (chunk.type === 'content_block_delta') {
-                completion = chunk.delta.text;
+                if (chunk.delta.type === 'text_delta') {
+                  completion = chunk.delta.text;
+                } else if (chunk.delta.type === 'input_json_delta') {
+                  if (currentToolCall) {
+                    accumulatedJsonString += chunk.delta.partial_json || '';
+
+                    try {
+                      // Try to parse the accumulated JSON
+                      const parsedJson = JSON.parse(accumulatedJsonString);
+                      currentToolCall.input = parsedJson;
+                      accumulatedJsonString = '';
+                    } catch (e) {
+                      // Not valid JSON yet, keep accumulating
+                    }
+                  }
+                } else if (chunk.delta.type === 'citations_delta') {
+                  citations.push(chunk.delta.citation);
+                }
+              } else if (chunk.type === 'content_block_stop') {
+                if (currentToolCall) {
+                  if (accumulatedJsonString) {
+                    try {
+                      const parsedJson = JSON.parse(accumulatedJsonString);
+                      currentToolCall.input = parsedJson;
+                    } catch (e) {
+                      console.warn('Failed to parse tool call JSON input:', accumulatedJsonString);
+                    }
+                  }
+
+                  toolCalls.push({ ...currentToolCall });
+                  currentToolCall = null;
+                  accumulatedJsonString = '';
+                }
               } else if (chunk.type === 'message_start' && chunk.message?.usage?.input_tokens) {
                 requestTokens = chunk.message.usage.input_tokens;
               } else if (chunk.type === 'message_delta' && chunk.delta?.usage?.output_tokens) {
                 responseTokens = chunk.delta.usage.output_tokens;
               }
-              if (!completion) {
-                continue;
+
+              if (completion) {
+                responseParts.push(completion);
               }
-              responseParts.push(completion);
+
               output['response' as PortId] = {
                 type: 'string',
                 value: responseParts.join('').trim(),
               };
+
+              if (toolCalls.length > 0) {
+                output['function-calls' as PortId] = {
+                  type: 'object[]',
+                  value: toolCalls.map((tool) => ({
+                    id: tool.id,
+                    name: tool.name,
+                    arguments: tool.input,
+                  })),
+                };
+              } else {
+                output['function-calls' as PortId] = {
+                  type: 'control-flow-excluded',
+                  value: undefined,
+                };
+              }
+
+              output['citations' as PortId] = {
+                type: 'object[]',
+                value: citations,
+              };
+
+              // Format function calls for the ChatMessage interface
+              const functionCalls = toolCalls.map((tool) => ({
+                name: tool.name,
+                arguments: typeof tool.input === 'object' ? JSON.stringify(tool.input) : tool.input,
+                id: tool.id,
+              }));
+
               output['all-messages' as PortId] = {
                 type: 'chat-message[]',
                 value: [
@@ -522,16 +633,18 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
                   {
                     type: 'assistant',
                     message: responseParts.join('').trim(),
-                    function_call: undefined,
-                    function_calls: undefined,
+                    function_call: functionCalls.length === 1 ? functionCalls[0] : undefined,
+                    function_calls: functionCalls.length > 0 ? functionCalls : undefined,
                   } satisfies ChatMessage,
                 ],
               };
+
               context.onPartialOutputs?.(output);
             }
 
-            if (responseParts.length === 0) {
-              throw new Error('No response from Anthropic');
+            // Final validation
+            if (responseParts.length === 0 && toolCalls.length === 0) {
+              throw new Error('No response or tool calls received from Anthropic');
             }
 
             output['requestTokens' as PortId] = { type: 'number', value: requestTokens ?? tokenCountEstimate };
@@ -541,6 +654,7 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
           } else {
             // Use the normal chat completion method for non-Claude 3 models
             const chunks = streamChatCompletions({
+              apiEndpoint,
               apiKey: apiKey ?? '',
               signal: context.signal,
               ...completionOptions,
@@ -640,22 +754,43 @@ export const ChatAnthropicNodeImpl: PluginNodeImpl<ChatAnthropicNode> = {
 
 export const chatAnthropicNode = pluginNodeDefinition(ChatAnthropicNodeImpl, 'Chat');
 
-export function getSystemPrompt(inputs: Inputs) {
-  const system = coerceTypeOptional(inputs['system' as PortId], 'string');
+export function getSystemPrompt(inputs: Inputs): SystemPrompt | undefined {
+  const systemInput = inputs['system' as PortId];
+
+  const system = coerceTypeOptional(systemInput, 'string');
+
   if (system) {
-    return system;
+    return [
+      {
+        type: 'text',
+        text: system,
+        cache_control:
+          systemInput?.type === 'chat-message'
+            ? systemInput.value.isCacheBreakpoint
+              ? { type: 'ephemeral' }
+              : null
+            : null,
+      },
+    ];
   }
+
   const prompt = inputs['prompt' as PortId];
   if (prompt && prompt.type === 'chat-message[]') {
-    const systemMessage = prompt.value.find((message) => message.type === 'system');
-    if (systemMessage) {
-      if (typeof systemMessage.message === 'string') {
-        return systemMessage.message;
-      } else if (Array.isArray(systemMessage.message)) {
-        return systemMessage.message.filter((p) => typeof p === 'string').join('');
-      }
+    const systemMessages = prompt.value.filter((message) => message.type === 'system');
+    if (systemMessages.length) {
+      const converted = systemMessages.map((message) => {
+        return {
+          type: 'text' as const,
+          text: coerceType({ type: 'chat-message', value: message }, 'string'),
+          cache_control: message.isCacheBreakpoint ? { type: 'ephemeral' as const } : null,
+        };
+      });
+
+      return converted;
     }
   }
+
+  return undefined;
 }
 
 function getChatMessages(inputs: Inputs) {
@@ -711,8 +846,7 @@ export async function chatMessagesToClaude3ChatMessages(chatMessages: ChatMessag
     ) {
       const last = acc.at(-1);
       if (last?.role === 'user' && Array.isArray(last.content) && last.content.every((c) => c.type === 'tool_result')) {
-				const mc = message.content as Claude3ChatMessageToolResultContentPart[]
-        const content = last.content.concat(mc);
+        const content = last.content.concat(message.content as Claude3ChatMessageToolResultContentPart[]);
         return [...acc.slice(0, -1), { ...last, content }];
       }
     }
@@ -727,6 +861,7 @@ async function chatMessageToClaude3ChatMessage(message: ChatMessage): Promise<Cl
   if (message.type === 'system') {
     return undefined;
   }
+
   if (message.type === 'function') {
     // Interpret function messages as user messages with tool_result content items (making Claude API more similar to OpenAI's)
     const content = (Array.isArray(message.message) ? message.message : [message.message])
@@ -739,13 +874,14 @@ async function chatMessageToClaude3ChatMessage(message: ChatMessage): Promise<Cl
           type: 'tool_result',
           tool_use_id: message.name,
           content: content.length === 1 ? content[0]!.text : content,
+          cache_control: message.isCacheBreakpoint ? { type: 'ephemeral' } : null,
         },
       ],
     };
   }
 
   const content = Array.isArray(message.message)
-    ? await Promise.all(message.message.map(chatMessageContentToClaude3ChatMessage))
+    ? await Promise.all(message.message.map((part) => chatMessageContentToClaude3ChatMessage(part)))
     : [await chatMessageContentToClaude3ChatMessage(message.message)];
 
   if (message.type === 'assistant' && message.function_calls) {
@@ -755,6 +891,7 @@ async function chatMessageToClaude3ChatMessage(message: ChatMessage): Promise<Cl
         id: fc.id!,
         name: fc.name,
         input: JSON.parse(fc.arguments),
+        cache_control: message.isCacheBreakpoint ? { type: 'ephemeral' as const } : null,
       })),
     );
   } else if (message.type === 'assistant' && message.function_call) {
@@ -763,8 +900,15 @@ async function chatMessageToClaude3ChatMessage(message: ChatMessage): Promise<Cl
       id: message.function_call.id!,
       name: message.function_call.name,
       input: JSON.parse(message.function_call.arguments),
+      cache_control: message.isCacheBreakpoint ? { type: 'ephemeral' } : null,
     });
   }
+
+  // If the message is a cache breakpoint, cache using the last content item of the message
+  if (message.isCacheBreakpoint) {
+    content.at(-1)!.cache_control = { type: 'ephemeral' };
+  }
+
   return {
     role: message.type,
     content,
@@ -778,6 +922,7 @@ async function chatMessageContentToClaude3ChatMessage(
     return {
       type: 'text',
       text: content,
+      cache_control: null, // set later
     };
   }
   switch (content.type) {
@@ -789,9 +934,23 @@ async function chatMessageContentToClaude3ChatMessage(
           media_type: content.mediaType as string,
           data: (await uint8ArrayToBase64(content.data)) ?? '',
         },
+        cache_control: null, // set later
       };
     case 'url':
       throw new Error('unable to convert urls for Claude');
+    case 'document':
+      return {
+        type: 'document',
+        source: {
+          type: 'base64' as const,
+          data: (await uint8ArrayToBase64(content.data)) ?? '',
+          media_type: content.mediaType as string,
+        },
+        title: content.title?.trim() ? content.title.trim() : undefined,
+        context: content.context?.trim() ? content.context.trim() : undefined,
+        citations: content.enableCitations ? { enabled: true } : undefined,
+        cache_control: null, // set later
+      };
     default:
       assertNever(content);
   }

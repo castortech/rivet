@@ -15,7 +15,7 @@ import { TrivetRenderer } from './trivet/Trivet.js';
 import { ActionBar } from './ActionBar';
 import { DebuggerPanelRenderer } from './DebuggerConnectPanel';
 import { ChatViewerRenderer } from './ChatViewer';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { themeState } from '../state/settings';
 import clsx from 'clsx';
 import { useLoadStaticData } from '../hooks/useLoadStaticData';
@@ -31,8 +31,10 @@ import { NewProjectModalRenderer } from './NewProjectModal';
 import { useWindowTitle } from '../hooks/useWindowTitle';
 import { CommunityOverlayRenderer } from './community/CommunityOverlay';
 import { HelpModal } from './HelpModal';
-import { openedProjectsSortedIdsState, projectsState } from '../state/savedGraphs';
+import { openedProjectsSortedIdsState } from '../state/savedGraphs';
 import { NoProject } from './NoProject';
+import { swallowPromise, syncWrapper } from '../utils/syncWrapper';
+import { allInitializeStoreFns } from '../state/storage';
 
 const styles = css`
   overflow: hidden;
@@ -44,15 +46,15 @@ setGlobalTheme({
 
 export const RivetApp: FC = () => {
   const { tryRunGraph, tryRunTests, tryAbortGraph, tryPauseGraph, tryResumeGraph } = useGraphExecutor();
-  const theme = useRecoilValue(themeState);
-  const openedProjectIds = useRecoilValue(openedProjectsSortedIdsState);
+  const theme = useAtomValue(themeState);
+  const openedProjectIds = useAtomValue(openedProjectsSortedIdsState);
 
   const noProjectOpen = openedProjectIds.length === 0;
 
   useLoadStaticData();
 
   useMenuCommands({
-    onRunGraph: tryRunGraph,
+    onRunGraph: syncWrapper(tryRunGraph),
   });
 
   useWindowsHotkeysFix();
@@ -85,15 +87,15 @@ export const RivetApp: FC = () => {
           <ProjectSelector />
           <OverlayTabs />
           <ActionBar
-            onRunGraph={tryRunGraph}
-            onRunTests={tryRunTests}
+            onRunGraph={syncWrapper(tryRunGraph)}
+            onRunTests={syncWrapper(tryRunTests)}
             onAbortGraph={tryAbortGraph}
             onPauseGraph={tryPauseGraph}
             onResumeGraph={tryResumeGraph}
           />
           <StatusBar />
           <DebuggerPanelRenderer />
-          <LeftSidebar onRunGraph={(graphId) => tryRunGraph({ graphId })} />
+          <LeftSidebar onRunGraph={(graphId) => swallowPromise(tryRunGraph({ graphId }))} />
           <GraphBuilder />
           <SettingsModal />
           <PromptDesignerRenderer />

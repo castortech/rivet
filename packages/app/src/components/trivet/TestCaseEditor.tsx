@@ -1,11 +1,12 @@
 import { type FC, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { trivetState } from '../../state/trivet';
-import { useRecoilState } from 'recoil';
+import { useAtom } from 'jotai';
 import Button from '@atlaskit/button';
 import { css } from '@emotion/react';
 import { isEqual, mean } from 'lodash-es';
 import { LazyCodeEditor } from '../LazyComponents';
 import type { monaco } from '../../utils/monaco';
+import { swallowPromise } from '../../utils/syncWrapper';
 
 const styles = css`
   display: flex;
@@ -56,8 +57,7 @@ const styles = css`
 `;
 
 export const TestCaseEditor: FC = () => {
-  const [{ testSuites, selectedTestSuiteId, editingTestCaseId, recentTestResults }, setState] =
-    useRecoilState(trivetState);
+  const [{ testSuites, selectedTestSuiteId, editingTestCaseId, recentTestResults }, setState] = useAtom(trivetState);
   const selectedTestSuite = useMemo(
     () => testSuites.find((ts) => ts.id === selectedTestSuiteId),
     [testSuites, selectedTestSuiteId],

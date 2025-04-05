@@ -1,13 +1,11 @@
-import { useEffect } from 'react';
-import { checkUpdate, installUpdate, onUpdaterEvent } from '@tauri-apps/api/updater';
-import useAsyncEffect from 'use-async-effect';
+import { checkUpdate } from '@tauri-apps/api/updater';
 import { toast } from 'react-toastify';
 import { css } from '@emotion/react';
 import { isInTauri } from '../utils/tauri';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { checkForUpdatesState, skippedMaxVersionState, updateModalOpenState } from '../state/settings';
-import { gt, lt, lte } from 'semver';
-import { getVersion } from '@tauri-apps/api/app';
+import { lte } from 'semver';
+import { swallowPromise } from '../utils/syncWrapper';
 
 const toastStyle = css`
   display: flex;
@@ -44,9 +42,9 @@ export function useCheckForUpdate({
   notifyNoUpdates = false,
   force = false,
 }: { notifyNoUpdates?: boolean; force?: boolean } = {}) {
-  const setUpdateModalOpen = useSetRecoilState(updateModalOpenState);
-  const checkForUpdates = useRecoilValue(checkForUpdatesState);
-  const [skippedMaxVersion, setSkippedMaxVersion] = useRecoilState(skippedMaxVersionState);
+  const setUpdateModalOpen = useSetAtom(updateModalOpenState);
+  const checkForUpdates = useAtomValue(checkForUpdatesState);
+  const [skippedMaxVersion, setSkippedMaxVersion] = useAtom(skippedMaxVersionState);
 
   return async () => {
     if (!checkForUpdates || !isInTauri()) {

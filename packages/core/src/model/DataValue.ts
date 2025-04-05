@@ -14,11 +14,17 @@ export type BoolDataValue = DataValueDef<'boolean', boolean>;
 export type SystemChatMessage = {
   type: 'system';
   message: ChatMessageMessagePart | ChatMessageMessagePart[];
+
+  /** If true, this message marks a breakpoint when used with prompt caching (as of right now, Anthropic-only). */
+  isCacheBreakpoint?: boolean;
 };
 
 export type UserChatMessage = {
   type: 'user';
   message: ChatMessageMessagePart | ChatMessageMessagePart[];
+
+  /** If true, this message marks a breakpoint when used with prompt caching (as of right now, Anthropic-only). */
+  isCacheBreakpoint?: boolean;
 };
 
 export type AssistantChatMessageFunctionCall = {
@@ -41,22 +47,37 @@ export type AssistantChatMessage = {
   function_call: AssistantChatMessageFunctionCall | undefined;
 
   function_calls: AssistantChatMessageFunctionCall[] | undefined;
+
+  /** If true, this message marks a breakpoint when used with prompt caching (as of right now, Anthropic-only). */
+  isCacheBreakpoint?: boolean;
 };
 
 export type FunctionResponseChatMessage = {
   type: 'function';
   message: ChatMessageMessagePart | ChatMessageMessagePart[];
   name: string;  //use to return the 'tool_call_id' value
+
+  /** If true, this message marks a breakpoint when used with prompt caching (as of right now, Anthropic-only). */
+  isCacheBreakpoint?: boolean;
 };
 
 export type ChatMessage = SystemChatMessage | UserChatMessage | AssistantChatMessage | FunctionResponseChatMessage;
 
 export type ChatMessageMessagePart =
   | string
-  | { type: 'image'; mediaType: SupportedMediaTypes; data: Uint8Array }
-  | { type: 'url'; url: string };
+  | { type: 'image'; mediaType: SupportedImageMediaTypes; data: Uint8Array }
+  | { type: 'url'; url: string }
+  | {
+      type: 'document';
+      title: string | undefined;
+      context: string | undefined;
+      mediaType: SupportedDocumentMediaTypes;
+      data: Uint8Array;
+      enableCitations: boolean;
+    };
 
-export type SupportedMediaTypes = 'image/jpeg' | 'image/png' | 'image/gif';
+export type SupportedImageMediaTypes = 'image/jpeg' | 'image/png' | 'image/gif';
+export type SupportedDocumentMediaTypes = 'application/pdf' | 'text/plain';
 
 export type ChatMessageDataValue = DataValueDef<'chat-message', ChatMessage>;
 
@@ -67,9 +88,19 @@ export type AnyDataValue = DataValueDef<'any', unknown>;
 export type ObjectDataValue = DataValueDef<'object', Record<string, unknown>>;
 export type VectorDataValue = DataValueDef<'vector', number[]>;
 export type BinaryDataValue = DataValueDef<'binary', Uint8Array>;
-export type ImageDataValue = DataValueDef<'image', { mediaType: SupportedMediaTypes; data: Uint8Array }>;
+export type ImageDataValue = DataValueDef<'image', { mediaType: SupportedImageMediaTypes; data: Uint8Array }>;
 export type AudioDataValue = DataValueDef<'audio', { mediaType?: string; data: Uint8Array }>;
 export type GraphReferenceValue = DataValueDef<'graph-reference', { graphId: GraphId; graphName: string }>;
+export type DocumentDataValue = DataValueDef<
+  'document',
+  {
+    mediaType: SupportedDocumentMediaTypes;
+    data: Uint8Array;
+    title: string | undefined;
+    context: string | undefined;
+    enableCitations: boolean;
+  }
+>;
 
 /** GPT function definition */
 export type GptFunction = {
@@ -100,7 +131,8 @@ export type ScalarDataValue =
   | ImageDataValue
   | BinaryDataValue
   | AudioDataValue
-  | GraphReferenceValue;
+  | GraphReferenceValue
+  | DocumentDataValue;
 
 export type ScalarType = ScalarDataValue['type'];
 
@@ -200,6 +232,10 @@ export const dataTypes = exhaustiveTuple<DataType>()(
   'graph-reference[]',
   'fn<graph-reference>',
   'fn<graph-reference[]>',
+  'document',
+  'document[]',
+  'fn<document>',
+  'fn<document[]>',
 );
 
 export const scalarTypes = exhaustiveTuple<ScalarType>()(
@@ -219,6 +255,7 @@ export const scalarTypes = exhaustiveTuple<ScalarType>()(
   'binary',
   'audio',
   'graph-reference',
+  'document',
 );
 
 export const dataTypeDisplayNames: Record<DataType, string> = {
@@ -286,6 +323,10 @@ export const dataTypeDisplayNames: Record<DataType, string> = {
   'graph-reference[]': 'Graph Reference Array',
   'fn<graph-reference>': 'Function<Graph Reference>',
   'fn<graph-reference[]>': 'Function<Graph Reference Array>',
+  document: 'Document',
+  'document[]': 'Document Array',
+  'fn<document>': 'Function<Document>',
+  'fn<document[]>': 'Function<Document Array>',
 };
 
 export function isScalarDataValue(value: DataValue | undefined): value is ScalarDataValue {
@@ -389,6 +430,7 @@ export const scalarDefaults: { [P in ScalarDataType]: Extract<ScalarDataValue, {
   'chat-message': {
     type: 'user',
     message: '',
+    isCacheBreakpoint: undefined,
   },
   'control-flow-excluded': undefined,
   date: new Date().toISOString(),
@@ -410,6 +452,13 @@ export const scalarDefaults: { [P in ScalarDataType]: Extract<ScalarDataValue, {
   binary: new Uint8Array(),
   audio: { data: new Uint8Array() },
   'graph-reference': { graphId: '' as GraphId, graphName: '' },
+  document: {
+    mediaType: 'text/plain',
+    data: new Uint8Array(),
+    title: undefined,
+    context: undefined,
+    enableCitations: false,
+  },
 };
 
 export function getDefaultValue<T extends DataType>(type: T): (DataValue & { type: T })['value'] {

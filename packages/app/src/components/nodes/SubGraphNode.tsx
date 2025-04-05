@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { projectState } from '../../state/savedGraphs.js';
 import { type Outputs, type PortId, type SubGraphNode, coerceTypeOptional, type DataValue } from '@ironclad/rivet-core';
 import { type NodeComponentDescriptor } from '../../hooks/useNodeTypes.js';
@@ -10,7 +10,7 @@ import { type InputsOrOutputsWithRefs } from '../../state/dataFlow';
 export const SubGraphNodeBody: FC<{
   node: SubGraphNode;
 }> = ({ node }) => {
-  const project = useRecoilValue(projectState);
+  const project = useAtomValue(projectState);
   const selectedGraph = project.graphs[node.data.graphId];
   const selectedGraphName = selectedGraph?.metadata?.name ?? node.data.graphId;
 
@@ -24,7 +24,8 @@ export const SubGraphNodeBody: FC<{
 export const SubGraphNodeOutputSimple: FC<{
   outputs: InputsOrOutputsWithRefs;
   renderMarkdown?: boolean;
-}> = ({ outputs, renderMarkdown }) => {
+  isCompact: boolean;
+}> = ({ outputs, renderMarkdown, isCompact }) => {
   const cost = coerceTypeOptional(outputs['cost' as PortId] as DataValue, 'number');
   const duration = coerceTypeOptional(outputs['duration' as PortId] as DataValue, 'number');
 
@@ -46,6 +47,7 @@ export const SubGraphNodeOutputSimple: FC<{
         <RenderDataOutputs
           outputs={omit(outputs, ['cost', 'duration'])! as InputsOrOutputsWithRefs}
           renderMarkdown={renderMarkdown}
+          isCompact={isCompact}
         />
       </div>
     </div>
@@ -56,7 +58,7 @@ export const FullscreenSubGraphNodeOutputSimple: FC<{
   outputs: InputsOrOutputsWithRefs;
   renderMarkdown: boolean;
 }> = ({ outputs, renderMarkdown }) => {
-  return <SubGraphNodeOutputSimple outputs={outputs} renderMarkdown={renderMarkdown} />;
+  return <SubGraphNodeOutputSimple outputs={outputs} renderMarkdown={renderMarkdown} isCompact={false} />;
 };
 
 export const subgraphNodeDescriptor: NodeComponentDescriptor<'subGraph'> = {

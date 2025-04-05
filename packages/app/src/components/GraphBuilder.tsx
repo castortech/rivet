@@ -1,6 +1,6 @@
-import { type FC, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { type FC, useEffect, useMemo, useState, type MouseEvent, useRef } from 'react';
 import { NodeCanvas } from './NodeCanvas.js';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtomValue, useAtom, useSetAtom } from 'jotai';
 import { connectionsState, isReadOnlyGraphState, nodesByIdState, nodesState } from '../state/graph.js';
 import { editingNodeState, selectedNodesState } from '../state/graphBuilder.js';
 import { NodeEditorRenderer } from './NodeEditor.js';
@@ -24,6 +24,10 @@ import { overlayOpenState } from '../state/ui';
 import { GraphExecutionSelectorBar } from './GraphExecutionSelectorBar';
 import { HistoricalGraphNotice } from './HistoricalGraphNotice';
 import { NodeChangesModal, NodeChangesModalRenderer } from './NodeChangesModal';
+import { syncWrapper } from '../utils/syncWrapper';
+import { AiGraphCreatorInput } from './AiGraphCreatorInput';
+import { AiGraphCreatorToggle } from './AiGraphCreatorToggle';
+import { useReloadProjectReferences } from '../hooks/useReloadProjectReferences';
 
 const Container = styled.div`
   position: relative;
@@ -59,12 +63,15 @@ const Container = styled.div`
 `;
 
 export const GraphBuilder: FC = () => {
-  const [nodes, setNodes] = useRecoilState(nodesState);
-  const [connections, setConnections] = useRecoilState(connectionsState);
-  const [selectedNodeIds, setSelectedNodeIds] = useRecoilState(selectedNodesState);
-  const setEditingNodeId = useSetRecoilState(editingNodeState);
-  const loadedRecording = useRecoilValue(loadedRecordingState);
-  const project = useRecoilValue(projectState);
+  const [nodes, setNodes] = useAtom(nodesState);
+  const [connections, setConnections] = useAtom(connectionsState);
+  const [selectedNodeIds, setSelectedNodeIds] = useAtom(selectedNodesState);
+  const setEditingNodeId = useSetAtom(editingNodeState);
+  const loadedRecording = useAtomValue(loadedRecordingState);
+  const project = useAtomValue(projectState);
+  const autoLayoutGraph = useRef(() => {});
+
+  useReloadProjectReferences();
 
   useDatasets(project.metadata.id);
 
@@ -75,8 +82,12 @@ export const GraphBuilder: FC = () => {
     setNodes?.(newNodes);
   });
 
-  const nodesById = useRecoilValue(nodesByIdState);
-  const contextMenuHandler = useGraphBuilderContextMenuHandler();
+  const nodesById = useAtomValue(nodesByIdState);
+  const contextMenuHandler = useGraphBuilderContextMenuHandler({
+    onAutoLayoutGraph: () => {
+      autoLayoutGraph.current();
+    },
+  });
 
   const nodeSelected = useStableCallback((node: ChartNode, multi: boolean) => {
     if (!multi) {
@@ -89,8 +100,8 @@ export const GraphBuilder: FC = () => {
     setEditingNodeId(node.id);
   });
 
-  const allCurrentQuestions = useRecoilValue(userInputModalQuestionsState);
-  const userInputModalSubmit = useRecoilValue(userInputModalSubmitState);
+  const allCurrentQuestions = useAtomValue(userInputModalQuestionsState);
+  const userInputModalSubmit = useAtomValue(userInputModalSubmitState);
   const firstNodeQuestions = useMemo(() => entries(allCurrentQuestions)[0], [allCurrentQuestions]);
 
   const [isUserInputModalOpen, setUserInputModalOpen] = useState(false);
@@ -135,8 +146,8 @@ export const GraphBuilder: FC = () => {
     [selectedNodeIds, nodesById],
   );
 
-  const overlay = useRecoilValue(overlayOpenState);
-  const isReadOnly = useRecoilValue(isReadOnlyGraphState);
+  const overlay = useAtomValue(overlayOpenState);
+  const isReadOnly = useAtomValue(isReadOnlyGraphState);
 
   return (
     <Container onMouseDown={containerMouseDown}>
@@ -150,6 +161,7 @@ export const GraphBuilder: FC = () => {
           selectedNodes={selectedNodes}
           onNodeStartEditing={nodeStartEditing}
           onContextMenuItemSelected={contextMenuHandler}
+          autoLayoutGraph={autoLayoutGraph}
         />
         {loadedRecording && <div className="recording-border" />}
         {isReadOnly && <div className="read-only-border" />}
@@ -170,6 +182,8 @@ export const GraphBuilder: FC = () => {
           onClose={handleCloseUserInputModal}
         />
         <NodeChangesModalRenderer />
+        <AiGraphCreatorInput />
+        <AiGraphCreatorToggle />
       </ErrorBoundary>
     </Container>
   );

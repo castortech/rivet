@@ -7,7 +7,6 @@ import EditPen from 'majesticons/line/edit-pen-2-line.svg?react';
 import TestTube from 'majesticons/line/test-tube-filled-line.svg?react';
 import GentraceImage from '../../assets/vendor_logos/gentrace.svg?react';
 import { toast } from 'react-toastify';
-import { useRecoilValue } from 'recoil';
 import { runGentraceTests, runRemoteGentraceTests } from '../../../../core/src/plugins/gentrace/plugin';
 import { useRemoteDebugger } from '../../hooks/useRemoteDebugger';
 import { useRemoteExecutor } from '../../hooks/useRemoteExecutor';
@@ -18,13 +17,14 @@ import { settingsState } from '../../state/settings';
 import { fillMissingSettingsFromEnvironmentVariables } from '../../utils/tauri';
 import GentracePipelinePicker, { type GentracePipeline } from './GentracePipelinePicker';
 import { entries } from '../../../../core/src/utils/typeSafety';
+import { useAtomValue } from 'jotai';
+import { syncWrapper } from '../../utils/syncWrapper';
 
 export const GentraceInteractors = () => {
-  const project = useRecoilValue(projectState);
-  const graph = useRecoilValue(graphState);
-  const savedSettings = useRecoilValue(settingsState);
-  const projectData = useRecoilValue(projectDataState);
-  const projectContext = useRecoilValue(projectContextState(project.metadata.id));
+  const project = useAtomValue(projectState);
+  const graph = useAtomValue(graphState);
+  const savedSettings = useAtomValue(settingsState);
+  const projectContext = useAtomValue(projectContextState(project.metadata.id));
 
   const remoteDebugger = useRemoteDebugger();
 
@@ -193,7 +193,7 @@ export const GentraceInteractors = () => {
       />
 
       <div className={clsx('run-gentrace-button')}>
-        <button onClick={onRun} css={``}>
+        <button onClick={syncWrapper(onRun)} css={``}>
           <div>
             <GentraceImage height="17px" width="17px" />
           </div>

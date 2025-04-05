@@ -7,14 +7,15 @@ import {
   serializeDatasets,
   type GraphId,
   type DataValue,
+  GraphProcessor,
+  type Outputs,
 } from '@ironclad/rivet-core';
 import { useCurrentExecution } from './useCurrentExecution';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
 import { graphState } from '../state/graph';
 import { settingsState } from '../state/settings';
 import { setCurrentDebuggerMessageHandler, useRemoteDebugger } from './useRemoteDebugger';
 import { fillMissingSettingsFromEnvironmentVariables } from '../utils/tauri';
-import { projectContextState, projectDataState, projectState } from '../state/savedGraphs';
+import { loadedProjectState, projectContextState, projectDataState, projectState } from '../state/savedGraphs';
 import { useStableCallback } from './useStableCallback';
 import { toast } from 'react-toastify';
 import { trivetState } from '../state/trivet';
@@ -25,6 +26,8 @@ import { pluginsState } from '../state/plugins';
 import { entries } from '../../../core/src/utils/typeSafety';
 import { selectedExecutorState } from '../state/execution';
 import { datasetProvider } from '../utils/globals';
+import { type RunDataByNodeId, lastRunDataByNodeState } from '../state/dataFlow';
+import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 
 // TODO: This allows us to retrieve the GraphOutputs from the remote debugger.
 // If the remote debugger events had a unique ID for each run, this would feel a lot less hacky.
@@ -36,16 +39,19 @@ let graphExecutionPromise: {
 };
 
 export function useRemoteExecutor() {
+  const project = useAtomValue(projectState);
+  const projectData = useAtomValue(projectDataState);
+  const projectContext = useAtomValue(projectContextState(project.metadata.id));
+
   const currentExecution = useCurrentExecution();
-  const graph = useRecoilValue(graphState);
-  const savedSettings = useRecoilValue(settingsState);
-  const project = useRecoilValue(projectState);
-  const projectData = useRecoilValue(projectDataState);
-  const [{ testSuites }, setTrivetState] = useRecoilState(trivetState);
-  const setUserInputModalSubmit = useSetRecoilState(userInputModalSubmitState);
-  const setUserInputQuestions = useSetRecoilState(userInputModalQuestionsState);
-  const selectedExecutor = useRecoilValue(selectedExecutorState);
-  const projectContext = useRecoilValue(projectContextState(project.metadata.id));
+  const graph = useAtomValue(graphState);
+  const savedSettings = useAtomValue(settingsState);
+  const [{ testSuites }, setTrivetState] = useAtom(trivetState);
+  const setUserInputModalSubmit = useSetAtom(userInputModalSubmitState);
+  const setUserInputQuestions = useSetAtom(userInputModalQuestionsState);
+  const selectedExecutor = useAtomValue(selectedExecutorState);
+  const lastRunData = useAtomValue(lastRunDataByNodeState);
+  const loadedProject = useAtomValue(loadedProjectState);
 
   const remoteDebugger = useRemoteDebugger({
     onDisconnect: () => {
@@ -119,7 +125,7 @@ export function useRemoteExecutor() {
     }
   });
 
-  const tryRunGraph = async (options: { to?: NodeId[]; graphId?: GraphId } = {}) => {
+  const tryRunGraph = async (options: { to?: NodeId[]; from?: NodeId; graphId?: GraphId } = {}) => {
     if (
       !remoteDebugger.remoteDebuggerState.started ||
       remoteDebugger.remoteDebuggerState.socket?.readyState !== WebSocket.OPEN
@@ -171,7 +177,22 @@ export function useRemoteExecutor() {
         {} as Record<string, DataValue>,
       );
 
-      remoteDebugger.send('run', { graphId: graphToRun, runToNodeIds: options.to, contextValues });
+      if (options.from) {
+        // Use a local graph processor to get dependency nodes instead of asking the remote debugger
+        const processor = new GraphProcessor(project, graph.metadata!.id!, undefined, true);
+        const dependencyNodes = processor.getDependencyNodesDeep(options.from);
+        const preloadData = getDependentDataForNodeForPreload(dependencyNodes, lastRunData);
+
+        remoteDebugger.send('preload', { nodeData: preloadData });
+      }
+
+      remoteDebugger.send('run', {
+        graphId: graphToRun,
+        runToNodeIds: options.to,
+        contextValues,
+        runFromNodeIds: options.from,
+        projectPath: loadedProject.path,
+      });
     } catch (e) {
       console.error(e);
     }
@@ -251,7 +272,7 @@ export function useRemoteExecutor() {
               {} as Record<string, DataValue>,
             );
 
-            remoteDebugger.send('run', { graphId, inputs, contextValues });
+            remoteDebugger.send('run', { graphId, inputs, contextValues, projectPath: loadedProject.path });
 
             const results = await graphExecutionPromise.promise!;
             return results;
@@ -303,4 +324,45 @@ export function useRemoteExecutor() {
     active: remoteDebugger.remoteDebuggerState.started,
     tryRunTests,
   };
+}
+
+function getDependentDataForNodeForPreload(dependencyNodes: NodeId[], previousRunData: RunDataByNodeId) {
+  const preloadData: Record<NodeId, Outputs> = {};
+
+  for (const dependencyNode of dependencyNodes) {
+    const dependencyNodeData = previousRunData[dependencyNode];
+
+    if (!dependencyNodeData) {
+      throw new Error(`Node ${dependencyNode} was not found in the previous run data, cannot continue preloading data`);
+    }
+
+    const firstExecution = dependencyNodeData[0];
+
+    if (!firstExecution?.data.outputData) {
+      throw new Error(
+        `Node ${dependencyNode} has no output data in the previous run data, cannot continue preloading data`,
+      );
+    }
+
+    const { outputData } = firstExecution.data;
+
+    // Convert back to DataValue from DataValueWithRefs
+    const outputDataWithoutRefs = Object.fromEntries(
+      Object.entries(outputData).map(([portId, dataValueWithRefs]) => {
+        if (dataValueWithRefs.type === 'image') {
+          throw new Error('Not implemented yed');
+        } else if (dataValueWithRefs.type === 'binary') {
+          throw new Error('Not implemented yed');
+        } else if (dataValueWithRefs.type === 'audio') {
+          throw new Error('Not implemented yed');
+        } else {
+          return [portId, dataValueWithRefs];
+        }
+      }),
+    ) as Outputs;
+
+    preloadData[dependencyNode] = outputDataWithoutRefs;
+  }
+
+  return preloadData;
 }

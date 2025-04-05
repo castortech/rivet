@@ -72,6 +72,10 @@ export const defaultEditorContainerStyles = css`
       min-width: 75px;
     }
 
+    label:nth-child(2) {
+      min-width: 32px;
+    }
+
     &.use-input-toggle label:first-child {
       min-width: unset;
     }
@@ -100,7 +104,6 @@ export const DefaultNodeEditor: FC<
       try {
         const dynamicImpl = globalRivetNodeRegistry.createDynamicImpl(node);
 
-        // eslint-disable-next-line @typescript-eslint/await-thenable -- Is is thenable you dummy
         let loadedEditors = await dynamicImpl.getEditors(await getUIContext({ node }));
 
         loadedEditors = produce(loadedEditors, (draft) => {

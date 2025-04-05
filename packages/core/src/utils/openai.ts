@@ -9,8 +9,19 @@ export type OpenAIModel = {
   cost: {
     prompt: number;
     completion: number;
+
+    audioPrompt?: number;
+    audioCompletion?: number;
   };
   displayName: string;
+
+  supported?: {
+    parallelFunctionCalls: boolean;
+  };
+};
+
+export const defaultOpenaiSupported: NonNullable<OpenAIModel['supported']> = {
+  parallelFunctionCalls: true,
 };
 
 export const openaiModels = {
@@ -45,54 +56,6 @@ export const openaiModels = {
       completion: 0.12,
     },
     displayName: 'GPT-4 32k (v0613)',
-  },
-  'gpt-3.5-turbo': {
-    maxTokens: 4096,
-    cost: {
-      prompt: 0.002,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 Turbo',
-  },
-  'gpt-3.5-turbo-16k': {
-    maxTokens: 16384,
-    cost: {
-      prompt: 0.001,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 16k',
-  },
-  'gpt-3.5-turbo-0613': {
-    maxTokens: 16384,
-    cost: {
-      prompt: 0.002,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 (v0613)',
-  },
-  'gpt-3.5-turbo-1106': {
-    maxTokens: 16385,
-    cost: {
-      prompt: 0.001,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 (v1106)',
-  },
-  'gpt-3.5-turbo-16k-0613': {
-    maxTokens: 16384,
-    cost: {
-      prompt: 0.001,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 16k (v0613)',
-  },
-  'gpt-3.5-turbo-0301': {
-    maxTokens: 16384,
-    cost: {
-      prompt: 0.002,
-      completion: 0.002,
-    },
-    displayName: 'GPT-3.5 (v0301)',
   },
   'gpt-4-0314': {
     maxTokens: 8192,
@@ -158,6 +121,93 @@ export const openaiModels = {
     },
     displayName: 'GPT-4o mini (2024-07-18)',
   },
+  o1: {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.015,
+      completion: 0.6,
+    },
+    displayName: 'o1',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o1-preview': {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.015,
+      completion: 0.06,
+    },
+    displayName: 'o1-preview',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o1-preview-2024-09-12': {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.015,
+      completion: 0.06,
+    },
+    displayName: 'o1-preview (2024-09-12)',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o1-mini': {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.0011,
+      completion: 0.0044,
+    },
+    displayName: 'o1-mini',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o1-mini-2024-09-12': {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.0011,
+      completion: 0.0044,
+    },
+    displayName: 'o1-mini (2024-09-12)',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o3-mini': {
+    maxTokens: 200000,
+    cost: {
+      prompt: 0.0011,
+      completion: 0.0044,
+    },
+    displayName: 'o3-mini',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'o3-mini-2025-01-31': {
+    maxTokens: 200000,
+    cost: {
+      prompt: 0.0011,
+      completion: 0.0044,
+    },
+    displayName: 'o3-mini (2025-01-31)',
+    supported: {
+      parallelFunctionCalls: false,
+    },
+  },
+  'gpt-4o-audio-preview': {
+    maxTokens: 128000,
+    cost: {
+      prompt: 0.0025,
+      completion: 0.01,
+      audioPrompt: 0.04,
+      audioCompletion: 0.08,
+    },
+    displayName: 'GPT-4o Audio (Preview)',
+  },
   'local-model': {
     maxTokens: Number.MAX_SAFE_INTEGER,
     cost: {
@@ -192,10 +242,16 @@ export type ChatCompletionRequestMessage =
   | ChatCompletionRequestSystemMessage
   | ChatCompletionRequestUserMessage
   | ChatCompletionRequestAssistantMessage
-  | ChatCompletionRequestToolMessage;
+  | ChatCompletionRequestToolMessage
+  | ChatCompletionRequestDeveloperMessage;
 
 export type ChatCompletionRequestSystemMessage = {
   role: 'system';
+  content: string | null;
+};
+
+export type ChatCompletionRequestDeveloperMessage = {
+  role: 'developer';
   content: string | null;
 };
 
@@ -258,6 +314,10 @@ export type ChatCompletionOptions = {
   temperature?: number;
   top_p?: number;
   max_tokens?: number;
+
+  /** Only for o1 series of models. Otherwise max_tokens. */
+  max_completion_tokens?: number;
+
   n?: number;
   stop?: string | string[];
   presence_penalty?: number;
@@ -280,6 +340,7 @@ export type ChatCompletionOptions = {
           name: string;
         };
       };
+  parallel_tool_calls?: boolean;
 
   /** An object specifying the format that the model must output. Used to enable JSON mode. */
   response_format?:
@@ -302,42 +363,90 @@ export type ChatCompletionOptions = {
           schema: object;
         };
       };
-};
 
-export type ChatCompletionResponse = {
-  /** A unique identifier for the chat completion. */
-  id: string;
-
-  /** The object type, which is always chat.completion. */
-  object: 'text_completion';
-
-  /** The Unix timestamp (in seconds) of when the chat completion was created. */
-  created: number;
-
-  /** The model used for the chat completion. */
-  model: string;
-
-  /**
-   * This fingerprint represents the backend configuration that the model runs with.
-   * Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-   */
-  system_fingerprint: string;
-
-  /** Usage statistics for the completion request. */
-  usage: {
-    /** Number of tokens in the generated completion. */
-    completion_tokens: number;
-
-    /** Number of tokens in the prompt. */
-    prompt_tokens: number;
-
-    /** Total number of tokens used in the request (prompt + completion). */
-    total_tokens: number;
+  prediction?: {
+    type: 'content';
+    content: string | { type: string; text: string }[];
   };
 
-  /** A list of chat completion choices. Can be more than one if n is greater than 1. */
-  choices: ChatCompletionResponseChoice[];
+  modalities: ('text' | 'audio')[] | undefined;
+
+  audio?: {
+    voice: string;
+    format: 'wav' | 'mp3' | 'flac' | 'opus' | 'pcm16';
+  };
+
+  reasoning_effort?: 'low' | 'medium' | 'high';
 };
+
+export type ChatCompletionResponse =
+  | {
+      /** A unique identifier for the chat completion. */
+      id: string;
+
+      /** The object type, which is always chat.completion. */
+      object: 'text_completion';
+
+      /** The Unix timestamp (in seconds) of when the chat completion was created. */
+      created: number;
+
+      /** The model used for the chat completion. */
+      model: string;
+
+      /**
+       * This fingerprint represents the backend configuration that the model runs with.
+       * Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+       */
+      system_fingerprint: string;
+
+      /** Usage statistics for the completion request. */
+      usage: {
+        /** Number of tokens in the generated completion. */
+        completion_tokens: number;
+
+        /** Number of tokens in the prompt. */
+        prompt_tokens: number;
+
+        /** Total number of tokens used in the request (prompt + completion). */
+        total_tokens: number;
+
+        prompt_tokens_details: {
+          /** Number of tokens used from the cache. */
+          cached_tokens: number;
+
+          /** Number of tokens used for audio. */
+          audio_tokens: number;
+
+          text_tokens: number;
+
+          image_tokens: number;
+        };
+
+        completion_tokens_details: {
+          /** Number of tokens used for reasoning. */
+          reasoning_tokens: number;
+
+          /** Number of tokens used for audio. */
+          audio_tokens: number;
+
+          /** Number of tokens used for accepted predictions. */
+          accepted_prediction_tokens: number;
+
+          /** Number of tokens used for rejected predictions. */
+          rejected_prediction_tokens: number;
+
+          text_tokens: number;
+        };
+      };
+
+      /** A list of chat completion choices. Can be more than one if n is greater than 1. */
+      choices: ChatCompletionResponseChoice[];
+    }
+  | {
+      error: {
+        message: string;
+      };
+    };
 
 export type ChatCompletionResponseChoice = {
   /** The index of the choice in the list of choices. */
@@ -363,6 +472,15 @@ export type ChatCompletionResponseMessage = {
 
   /** The tool calls generated by the model, such as function calls. */
   tool_calls: OpenAIFunctionToolCall[];
+
+  refusal: string | null;
+
+  audio?: {
+    id: string;
+    data: string;
+    expires_at: number;
+    transcript: string;
+  };
 };
 
 export type ChatCompletionChunk = {
@@ -370,7 +488,25 @@ export type ChatCompletionChunk = {
   created: number;
   model: string;
   choices?: ChatCompletionChunkChoice[];
-	usage?: CompletionUsage;
+  usage?: ChatCompletionChunkUsage;
+};
+
+export type ChatCompletionChunkUsage = {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+
+  prompt_tokens_details: {
+    cached_tokens: number;
+    audio_tokens: number;
+  };
+
+  completion_tokens_details: {
+    reasoning_tokens: number;
+    audio_tokens: number;
+    accepted_prediction_tokens: number;
+    rejected_prediction_tokens: number;
+  };
 };
 
 export type GptFunctionCall = {
@@ -381,12 +517,7 @@ export type GptFunctionCall = {
 export type GptFunctionCallDelta = {
   name?: string;
   arguments?: string;
-};
 
-export interface CompletionUsage {
-  completion_tokens: number;
-  prompt_tokens: number;
-  total_tokens: number;
 };
 
 export type ChatCompletionChunkChoice = {
@@ -421,6 +552,31 @@ export type ChatCompletionFunction = {
   strict: boolean;
 };
 
+export async function chatCompletions({
+  endpoint,
+  auth,
+  signal,
+  headers,
+  timeout,
+  ...rest
+}: ChatCompletionOptions): Promise<ChatCompletionResponse> {
+  const abortSignal = signal ?? new AbortController().signal;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${auth.apiKey}`,
+      ...(auth.organization ? { 'OpenAI-Organization': auth.organization } : {}),
+      ...headers,
+    },
+    body: JSON.stringify(rest),
+    signal: abortSignal,
+  });
+
+  return response.json();
+}
+
 export async function* streamChatCompletions({
   endpoint,
   auth,
@@ -444,9 +600,9 @@ export async function* streamChatCompletions({
       body: JSON.stringify({
         ...rest,
 				stream: true,
-        stream_options : {
-   			 "include_usage": true
-  			},
+        stream_options: {
+          include_usage: true,
+        },
       }),
       signal: abortSignal,
     },

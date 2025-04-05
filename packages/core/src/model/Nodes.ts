@@ -1,6 +1,4 @@
-import type { ChartNode } from './NodeBase.js';
 import { NodeRegistration } from './NodeRegistration.js';
-import type { NodeImpl } from './NodeImpl.js';
 
 import { userInputNode } from './nodes/UserInputNode.js';
 export * from './nodes/UserInputNode.js';
@@ -10,6 +8,7 @@ export * from './nodes/TextNode.js';
 
 import { chatNode } from './nodes/ChatNode.js';
 export * from './nodes/ChatNode.js';
+export * from './nodes/ChatNodeBase.js';
 
 import { promptNode } from './nodes/PromptNode.js';
 export * from './nodes/PromptNode.js';
@@ -95,8 +94,8 @@ export * from './nodes/GetGlobalNode.js';
 import { waitForEventNode } from './nodes/WaitForEventNode.js';
 export * from './nodes/WaitForEventNode.js';
 
-import { gptFunctionNode } from './nodes/GptFunctionNode.js';
-export * from './nodes/GptFunctionNode.js';
+import { gptFunctionNode } from './nodes/ToolNode.js';
+export * from './nodes/ToolNode.js';
 
 import { toYamlNode } from './nodes/ToYamlNode.js';
 export * from './nodes/ToYamlNode.js';
@@ -221,7 +220,29 @@ export * from './nodes/DelegateFunctionCallNode.js';
 import { playAudioNode } from './nodes/PlayAudioNode.js';
 export * from './nodes/PlayAudioNode.js';
 
-export * from './nodes/CallGraphNode.js';
+import { documentNode } from './nodes/DocumentNode.js';
+export * from './nodes/DocumentNode.js';
+
+import { chatLoopNode } from './nodes/ChatLoopNode.js';
+export * from './nodes/ChatLoopNode.js';
+
+import { readAllFilesNode } from './nodes/ReadAllFilesNode.js';
+export * from './nodes/ReadAllFilesNode.js';
+
+import { toMarkdownTableNode } from './nodes/ToMarkdownTableNode.js';
+export * from './nodes/ToMarkdownTableNode.js';
+
+import { cronNode } from './nodes/CronNode.js';
+export * from './nodes/CronNode.js';
+
+import { toTreeNode } from './nodes/ToTreeNode.js';
+export * from './nodes/ToTreeNode.js';
+
+import { loopUntilNode } from './nodes/LoopUntilNode.js';
+export * from './nodes/LoopUntilNode.js';
+
+import { referencedGraphAliasNode } from './nodes/ReferencedGraphAliasNode.js';
+export * from './nodes/ReferencedGraphAliasNode.js';
 
 export const registerBuiltInNodes = (registry: NodeRegistration) => {
   return registry
@@ -297,7 +318,15 @@ export const registerBuiltInNodes = (registry: NodeRegistration) => {
     .register(graphReferenceNode)
     .register(callGraphNode)
     .register(delegateFunctionCallNode)
-    .register(playAudioNode);
+    .register(playAudioNode)
+    .register(documentNode)
+    .register(chatLoopNode)
+    .register(readAllFilesNode)
+    .register(toMarkdownTableNode)
+    .register(cronNode)
+    .register(toTreeNode)
+    .register(loopUntilNode)
+    .register(referencedGraphAliasNode);
 };
 
 let globalRivetNodeRegistry = registerBuiltInNodes(new NodeRegistration());

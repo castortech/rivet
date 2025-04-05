@@ -13,8 +13,12 @@ import {
   type ChartNode,
   type AttachedNodeData,
   type AudioProvider,
+  type StringArrayDataValue,
+  type ProjectId,
 } from '../index.js';
 import type { Tokenizer } from '../integrations/Tokenizer.js';
+import type { CodeRunner } from '../integrations/CodeRunner.js';
+import type { ProjectReferenceLoader } from './ProjectReferenceLoader.js';
 
 export type ProcessContext = {
   settings: Settings;
@@ -28,6 +32,15 @@ export type ProcessContext = {
 
   /** Sets the tokenizer that will be used for all nodes. If unset, the default GptTokenizerTokenizer will be used. */
   tokenizer?: Tokenizer;
+
+  /** The provider for running arbitrary code in the Code Node. */
+  codeRunner?: CodeRunner;
+
+  /** The loader for loading project references. */
+  projectReferenceLoader?: ProjectReferenceLoader;
+
+  /** The path to the current project. Required if project references are being used. */
+  projectPath?: string;
 
   /**
    * If implemented, chat nodes will first call this to resolve their configured endpoint to a final endpoint.
@@ -52,6 +65,9 @@ export type InternalProcessContext<T extends ChartNode = ChartNode> = ProcessCon
 
   /** The project being executed. */
   project: Project;
+
+  /** All referenced (and deep referenced) projects from the current project. */
+  referencedProjects: Record<ProjectId, Project>;
 
   /** A signal that can be used when abort() is called on the GraphProcessor to abort the node's execution. */
   signal: AbortSignal;
@@ -92,7 +108,10 @@ export type InternalProcessContext<T extends ChartNode = ChartNode> = ProcessCon
   onPartialOutputs?: (outputs: Outputs) => void;
 
   /** Creates a subprocessor, for executing subgraphs. */
-  createSubProcessor: (subGraphId: GraphId | undefined, options?: { signal?: AbortSignal }) => GraphProcessor;
+  createSubProcessor: (
+    subGraphId: GraphId | undefined,
+    options?: { signal?: AbortSignal; project?: Project },
+  ) => GraphProcessor;
 
   /** Like context, but variables that are set during the run of the graph and can be read during the graph. Shared among all graphs and subgraphs. */
   getGlobal: (id: string) => ScalarOrArrayDataValue | undefined;
@@ -110,4 +129,10 @@ export type InternalProcessContext<T extends ChartNode = ChartNode> = ProcessCon
 
   /** Gets a string plugin config value from the settings, falling back to a specified environment variable if set. */
   getPluginConfig(name: string): string | undefined;
+
+  /** Requests that the user input some text in response to the specified prompt. */
+  requestUserInput(inputs: string[], renderingType: 'text' | 'markdown'): Promise<StringArrayDataValue>;
+
+  /** The object used for running arbitrary code with the Code Node. */
+  codeRunner: CodeRunner;
 };

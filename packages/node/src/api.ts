@@ -13,9 +13,10 @@ import {
 } from '@ironclad/rivet-core';
 
 import { readFile } from 'node:fs/promises';
-import { type RivetDebuggerServer, type Settings } from './index.js';
+import { NodeProjectReferenceLoader, type RivetDebuggerServer, type Settings } from './index.js';
 import { NodeNativeApi } from './native/NodeNativeApi.js';
 import * as events from 'node:events';
+import { NodeCodeRunner } from './native/NodeCodeRunner.js';
 
 export async function loadProjectFromFile(path: string): Promise<Project> {
   const content = await readFile(path, { encoding: 'utf8' });
@@ -27,7 +28,7 @@ export async function loadProjectAndAttachedDataFromFile(path: string): Promise<
   return loadProjectAndAttachedDataFromString(content);
 }
 
-export async function runGraphInFile(path: string, options: RunGraphOptions): Promise<Record<string, DataValue>> {
+export async function runGraphInFile(path: string, options: NodeRunGraphOptions): Promise<Record<string, DataValue>> {
   const project = await loadProjectFromFile(path);
   return runGraph(project, options);
 }
@@ -45,7 +46,7 @@ export function createProcessor(
   processor.processor.executor = 'nodejs';
 
   processor.processor.on('newAbortController', (controller) => {
-    events.setMaxListeners(100, controller.signal);
+    events.setMaxListeners(0, controller.signal);
   });
 
   if (options.remoteDebugger) {
@@ -66,6 +67,10 @@ export function createProcessor(
           nativeApi: options.nativeApi ?? new NodeNativeApi(),
           datasetProvider: options.datasetProvider,
           audioProvider: options.audioProvider,
+          tokenizer: options.tokenizer,
+          codeRunner: options.codeRunner ?? new NodeCodeRunner(),
+          projectPath: options.projectPath,
+          projectReferenceLoader: options.projectReferenceLoader ?? new NodeProjectReferenceLoader(),
           settings: {
             openAiKey: options.openAiKey ?? process.env.OPENAI_API_KEY ?? '',
             openAiOrganization: options.openAiOrganization ?? process.env.OPENAI_ORG_ID ?? '',
@@ -75,6 +80,7 @@ export function createProcessor(
             recordingPlaybackLatency: 1000,
             chatNodeHeaders: options.chatNodeHeaders ?? {},
             chatNodeTimeout: options.chatNodeTimeout ?? DEFAULT_CHAT_NODE_TIMEOUT,
+            throttleChatNode: options.throttleChatNode ?? 100,
           } satisfies Required<Settings>,
           getChatNodeEndpoint: options.getChatNodeEndpoint,
         },
@@ -87,7 +93,7 @@ export function createProcessor(
   };
 }
 
-export async function runGraph(project: Project, options: RunGraphOptions): Promise<Record<string, DataValue>> {
+export async function runGraph(project: Project, options: NodeRunGraphOptions): Promise<Record<string, DataValue>> {
   const processorInfo = createProcessor(project, options);
   return processorInfo.run();
 }

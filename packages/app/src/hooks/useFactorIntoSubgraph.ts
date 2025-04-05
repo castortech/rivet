@@ -1,4 +1,4 @@
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { useStableCallback } from './useStableCallback.js';
 import { selectedNodesState } from '../state/graphBuilder.js';
 import { connectionsState, nodesByIdState } from '../state/graph.js';
@@ -14,17 +14,18 @@ import {
   emptyNodeGraph,
   globalRivetNodeRegistry,
 } from '@ironclad/rivet-core';
-import { projectState } from '../state/savedGraphs.js';
+import { projectState, referencedProjectsState } from '../state/savedGraphs.js';
 import { isNotNull } from '../utils/genericUtilFunctions.js';
 import { nanoid } from 'nanoid/non-secure';
 import { useLoadGraph } from './useLoadGraph.js';
 
 export function useFactorIntoSubgraph() {
-  const project = useRecoilValue(projectState);
-  const selectedNodeIds = useRecoilValue(selectedNodesState);
-  const connections = useRecoilValue(connectionsState);
+  const project = useAtomValue(projectState);
+  const selectedNodeIds = useAtomValue(selectedNodesState);
+  const connections = useAtomValue(connectionsState);
   const loadGraph = useLoadGraph();
-  const nodesById = useRecoilValue(nodesByIdState);
+  const nodesById = useAtomValue(nodesByIdState);
+  const referencedProjects = useAtomValue(referencedProjectsState);
 
   return useStableCallback(() => {
     if (selectedNodeIds.length === 0) {
@@ -52,7 +53,7 @@ export function useFactorIntoSubgraph() {
 
         const inputDefs = globalRivetNodeRegistry
           .createDynamicImpl(inputNode)
-          .getInputDefinitions(connections, nodesById, project);
+          .getInputDefinitionsIncludingBuiltIn(connections, nodesById, project, referencedProjects);
 
         if (!inputDefs.find((d) => d.id === connection.inputId)) {
           return undefined;
@@ -60,7 +61,7 @@ export function useFactorIntoSubgraph() {
 
         const outputDefs = globalRivetNodeRegistry
           .createDynamicImpl(outputNode)
-          .getOutputDefinitions(connections, nodesById, project);
+          .getOutputDefinitions(connections, nodesById, project, referencedProjects);
 
         const outputDef = outputDefs.find((d) => d.id === connection.outputId);
 
@@ -113,7 +114,7 @@ export function useFactorIntoSubgraph() {
 
         const outputDefs = globalRivetNodeRegistry
           .createDynamicImpl(outputNode)
-          .getOutputDefinitions(connections, nodesById, project);
+          .getOutputDefinitions(connections, nodesById, project, referencedProjects);
         const outputDef = outputDefs.find((d) => d.id === connection.outputId);
 
         if (!outputDef) {
@@ -122,7 +123,7 @@ export function useFactorIntoSubgraph() {
 
         const inputDefs = globalRivetNodeRegistry
           .createDynamicImpl(inputNode)
-          .getInputDefinitions(connections, nodesById, project);
+          .getInputDefinitionsIncludingBuiltIn(connections, nodesById, project, referencedProjects);
         const inputDef = inputDefs.find((d) => d.id === connection.inputId);
 
         if (!inputDef) {

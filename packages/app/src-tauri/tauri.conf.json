@@ -7,14 +7,14 @@
   },
   "package": {
     "productName": "Aidon Rivet",
-    "version": "1.8.14"
+    "version": "1.10.2"
   },
   "tauri": {
     "allowlist": {
       "all": false,
       "fs": {
         "all": true,
-        "scope": ["$APPLOCALDATA/**", "$APPLOCALDATA/**/.*", "$TEMP/**"]
+        "scope": ["$APPLOCALDATA/**", "$APPLOCALDATA/**/.*", "$TEMP/**", "**", "**/*", "/**/*"]
       },
       "path": {
         "all": true

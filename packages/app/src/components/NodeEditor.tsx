@@ -1,7 +1,6 @@
 import { type FC, useMemo, useState, type MouseEvent } from 'react';
 import { editingNodeState } from '../state/graphBuilder.js';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
-import { connectionsForSingleNodeState, connectionsState, nodesByIdState, nodesState } from '../state/graph.js';
+import { nodesByIdState } from '../state/graph.js';
 import styled from '@emotion/styled';
 import MultiplyIcon from 'majesticons/line/multiply-line.svg?react';
 import {
@@ -23,17 +22,19 @@ import TextField from '@atlaskit/textfield';
 import Select from '@atlaskit/select';
 import Button from '@atlaskit/button';
 import Popup from '@atlaskit/popup';
-import { orderBy } from 'lodash-es';
+import { isEqual, orderBy } from 'lodash-es';
 import { nanoid } from 'nanoid/non-secure';
 import { ErrorBoundary } from 'react-error-boundary';
-import { projectDataState, projectState } from '../state/savedGraphs';
 import { useSetStaticData } from '../hooks/useSetStaticData';
 import { DefaultNodeEditor } from './editors/DefaultNodeEditor';
 import { NodeColorPicker } from './NodeColorPicker';
+import { Tooltip } from './Tooltip';
+import { useAtomValue, useAtom, useSetAtom } from 'jotai';
+import { useEditNodeCommand } from '../commands/editNodeCommand';
 
 export const NodeEditorRenderer: FC = () => {
-  const nodesById = useRecoilValue(nodesByIdState);
-  const [editingNodeId, setEditingNodeId] = useRecoilState(editingNodeState);
+  const nodesById = useAtomValue(nodesByIdState);
+  const [editingNodeId, setEditingNodeId] = useAtom(editingNodeState);
 
   const deselect = useStableCallback(() => {
     setEditingNodeId(null);
@@ -217,7 +218,7 @@ const Container = styled.div`
   .section-global-controls {
     display: grid;
     grid-template-columns: auto 1fr 1fr;
-    row-gap: 8px;
+    row-gap: 0;
     column-gap: 16px;
     margin-bottom: 16px;
     padding-bottom: 16px;
@@ -264,45 +265,22 @@ type NodeEditorProps = { selectedNode: ChartNode; onDeselect: () => void };
 export type NodeChanged = (changed: ChartNode, newData?: Record<DataId, string>) => void;
 
 export const NodeEditor: FC<NodeEditorProps> = ({ selectedNode, onDeselect }) => {
-  const setNodes = useSetRecoilState(nodesState);
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
   const [addVariantPopupOpen, setAddVariantPopupOpen] = useState(false);
 
-  const nodesById = useRecoilValue(nodesByIdState);
-  const project = useRecoilValue(projectState);
-  const connectionsForNode = useRecoilValue(connectionsForSingleNodeState(selectedNode.id));
-  const setConnections = useSetRecoilState(connectionsState);
   const setStaticData = useSetStaticData();
+  const editNode = useEditNodeCommand();
 
   const updateNode = useStableCallback((node: ChartNode, newData?: Record<DataId, string>) => {
-    // Update the node
-    setNodes((nodes) =>
-      produce(nodes, (draft) => {
-        const index = draft.findIndex((n) => n.id === node.id);
-        draft[index] = node;
-      }),
-    );
+    // Otherwise the editor "changes" and causes deleted nodes to reappear...
+    if (isEqual(node, selectedNode)) {
+      return;
+    }
+
+    editNode({ nodeId: node.id, newNode: node });
 
     if (newData) {
       setStaticData(newData);
-    }
-
-    // Check for any invalid connections
-    const instance = globalRivetNodeRegistry.createDynamicImpl(node);
-
-    const inputDefs = instance.getInputDefinitions(connectionsForNode ?? [], nodesById, project);
-    const outputDefs = instance.getOutputDefinitions(connectionsForNode ?? [], nodesById, project);
-
-    const invalidConnections = connectionsForNode?.filter((connection) => {
-      if (connection.inputNodeId === node.id) {
-        return !inputDefs.find((def) => def.id === connection.inputId);
-      } else {
-        return !outputDefs.find((def) => def.id === connection.outputId);
-      }
-    });
-
-    if (invalidConnections?.length) {
-      setConnections((conns) => conns.filter((c) => !invalidConnections.includes(c)));
     }
   });
 
@@ -556,6 +534,24 @@ export const NodeEditor: FC<NodeEditorProps> = ({ selectedNode, onDeselect }) =>
                               )}
                             />
                           )}
+                        </section>
+                      )}
+                    </Field>
+                    <div />
+                    <Field name="conditional" label="Conditional Node">
+                      {({ fieldProps }) => (
+                        <section className="split-controls">
+                          <div className="split-controls-toggle">
+                            <Tooltip content="Exposes a conditional input port to the node, allowing to be executed only if the condition is met.">
+                              <Toggle
+                                {...fieldProps}
+                                isChecked={selectedNode.isConditional}
+                                onChange={(conditional) =>
+                                  updateNode({ ...selectedNode, isConditional: conditional.target.checked })
+                                }
+                              />
+                            </Tooltip>
+                          </div>
                         </section>
                       )}
                     </Field>

@@ -9,12 +9,13 @@ import {
 } from '@ironclad/rivet-core';
 import { nanoid } from 'nanoid/non-secure';
 import { type FC } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { projectDataState } from '../../state/savedGraphs';
 import { ioProvider } from '../../utils/globals';
 import { type SharedEditorProps } from './SharedEditorProps';
 import { getHelperMessage } from './editorUtils';
 import mime from 'mime';
+import { syncWrapper } from '../../utils/syncWrapper';
 
 export const DefaultImageBrowserEditor: FC<
   SharedEditorProps & {
@@ -24,27 +25,29 @@ export const DefaultImageBrowserEditor: FC<
   const data = node.data as Record<string, unknown>;
   const helperMessage = getHelperMessage(editor, node.data);
 
-  const dataState = useRecoilValue(projectDataState);
+  const dataState = useAtomValue(projectDataState);
 
   const pickFile = async () => {
-    await ioProvider.readFileAsBinary(async (binaryData) => {
-      const dataId = nanoid() as DataId;
-      onChange(
-        {
-          ...node,
-          data: {
-            ...data,
-            [editor.dataKey]: {
-              refId: dataId,
-            } satisfies DataRef,
-            [editor.mediaTypeDataKey]: mime.getType(editor.dataKey) ?? 'image/png',
+    await ioProvider.readFileAsBinary(
+      syncWrapper(async (binaryData: Uint8Array) => {
+        const dataId = nanoid() as DataId;
+        onChange(
+          {
+            ...node,
+            data: {
+              ...data,
+              [editor.dataKey]: {
+                refId: dataId,
+              } satisfies DataRef,
+              [editor.mediaTypeDataKey]: mime.getType(editor.dataKey) ?? 'image/png',
+            },
           },
-        },
-        {
-          [dataId]: (await uint8ArrayToBase64(binaryData)) ?? '',
-        },
-      );
-    });
+          {
+            [dataId]: (await uint8ArrayToBase64(binaryData)) ?? '',
+          },
+        );
+      }),
+    );
   };
 
   const dataRef = data[editor.dataKey] as DataRef | undefined;
@@ -57,7 +60,7 @@ export const DefaultImageBrowserEditor: FC<
     <Field name={editor.dataKey} label={editor.label}>
       {() => (
         <div>
-          <Button onClick={pickFile} isDisabled={isReadonly || isDisabled}>
+          <Button onClick={syncWrapper(pickFile)} isDisabled={isReadonly || isDisabled}>
             Pick Image
           </Button>
           {helperMessage && <HelperMessage>{helperMessage}</HelperMessage>}

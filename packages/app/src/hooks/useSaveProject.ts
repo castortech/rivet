@@ -1,4 +1,4 @@
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { loadedProjectState, openedProjectsState, projectState } from '../state/savedGraphs.js';
 import { useSaveCurrentGraph } from './useSaveCurrentGraph.js';
 import { produce } from 'immer';
@@ -8,21 +8,23 @@ import { trivetState } from '../state/trivet.js';
 
 export function useSaveProject() {
   const saveGraph = useSaveCurrentGraph();
-  const project = useRecoilValue(projectState);
-  const [loadedProject, setLoadedProject] = useRecoilState(loadedProjectState);
-  const { testSuites } = useRecoilValue(trivetState);
-  const setOpenedProjects = useSetRecoilState(openedProjectsState);
+  const project = useAtomValue(projectState);
+  const [loadedProject, setLoadedProject] = useAtom(loadedProjectState);
+  const { testSuites } = useAtomValue(trivetState);
+  const setOpenedProjects = useSetAtom(openedProjectsState);
 
   async function saveProject() {
     if (!loadedProject.loaded || !loadedProject.path) {
       return saveProjectAs();
     }
 
-    const savedGraph = saveGraph(); // TODO stupid react rerendering... project will still be stale and not have this graph
+    const savedGraph = saveGraph();
 
-    const newProject = produce(project, (draft) => {
-      draft.graphs[savedGraph.metadata!.id!] = savedGraph;
-    });
+    const newProject = savedGraph
+      ? produce(project, (draft) => {
+          draft.graphs[savedGraph.metadata!.id!] = savedGraph;
+        })
+      : project;
 
     // Large datasets can save slowly because of indexeddb, so show a "saving..." toast if it's a slow save
     let saving: ToastId | undefined;
@@ -50,11 +52,13 @@ export function useSaveProject() {
   }
 
   async function saveProjectAs() {
-    const savedGraph = saveGraph(); // TODO stupid react rerendering... project will still be stale and not have this graph
+    const savedGraph = saveGraph();
 
-    const newProject = produce(project, (draft) => {
-      draft.graphs[savedGraph.metadata!.id!] = savedGraph;
-    });
+    const newProject = savedGraph
+      ? produce(project, (draft) => {
+          draft.graphs[savedGraph.metadata!.id!] = savedGraph;
+        })
+      : project;
 
     // Large datasets can save slowly because of indexeddb, so show a "saving..." toast if it's a slow save
     let saving: ToastId | undefined;
@@ -76,13 +80,12 @@ export function useSaveProject() {
           loaded: true,
           path: filePath,
         });
-        setOpenedProjects((projects) => ({
-          ...projects,
+        setOpenedProjects({
           [project.metadata.id]: {
             project,
             fsPath: filePath,
           },
-        }));
+        });
       }
     } catch (cause) {
       clearTimeout(savingTimeout);

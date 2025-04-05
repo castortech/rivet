@@ -6,6 +6,7 @@ import {
   plugins as rivetPlugins,
   registerBuiltInNodes,
   DebuggerDatasetProvider,
+  NodeProjectReferenceLoader,
 } from '@ironclad/rivet-node';
 import * as Rivet from '@ironclad/rivet-core';
 import { type RivetPluginInitializer } from '@ironclad/rivet-core';
@@ -47,7 +48,7 @@ const rivetDebugger = startDebuggerServer({
   port,
   allowGraphUpload: true,
   datasetProvider,
-  dynamicGraphRun: async ({ graphId, inputs, runToNodeIds, contextValues }) => {
+  dynamicGraphRun: async ({ graphId, inputs, runToNodeIds, contextValues, runFromNodeId, projectPath }) => {
     console.log(`Running graph ${graphId} with inputs:`, inputs);
 
     const project = currentDebuggerState.uploadedProject;
@@ -140,10 +141,16 @@ const rivetDebugger = startDebuggerServer({
           console.log(trace);
         },
         context: contextValues,
+        projectPath,
+        projectReferenceLoader: new NodeProjectReferenceLoader(),
       });
 
       if (runToNodeIds) {
         processor.processor.runToNodeIds = runToNodeIds;
+      }
+
+      if (runFromNodeId) {
+        processor.processor.runFromNodeId = runFromNodeId;
       }
 
       await processor.run();

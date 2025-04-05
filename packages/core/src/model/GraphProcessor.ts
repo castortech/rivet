@@ -10,34 +10,38 @@ import {
   type ScalarOrArrayDataValue,
   getScalarTypeOf,
 } from './DataValue.js';
-import type {
-  ChartNode,
-  NodeConnection,
-  NodeId,
-  NodeInputDefinition,
-  NodeOutputDefinition,
-  PortId,
+import {
+  IF_PORT,
+  type ChartNode,
+  type NodeConnection,
+  type NodeId,
+  type NodeInputDefinition,
+  type NodeOutputDefinition,
+  type PortId,
 } from './NodeBase.js';
 import type { GraphId, NodeGraph } from './NodeGraph.js';
 import type { NodeImpl } from './NodeImpl.js';
-import type { UserInputNode, UserInputNodeImpl } from './nodes/UserInputNode.js';
+import type { UserInputNode } from './nodes/UserInputNode.js';
 import PQueueImport from 'p-queue';
 import { getError } from '../utils/errors.js';
 import Emittery from 'emittery';
 import { entries, fromEntries, values } from '../utils/typeSafety.js';
 import { isNotNull } from '../utils/genericUtilFunctions.js';
-import type { Project } from './Project.js';
+import { type ProjectId, type Project, type ProjectReference } from './Project.js';
 import { nanoid } from 'nanoid/non-secure';
 import type { InternalProcessContext, ProcessContext, ProcessId } from './ProcessContext.js';
 import type { ExecutionRecorder } from '../recording/ExecutionRecorder.js';
 import { P, match } from 'ts-pattern';
-import type { Opaque } from 'type-fest';
+import type { Tagged } from 'type-fest';
 import { coerceTypeOptional } from '../utils/coerceType.js';
 import { globalRivetNodeRegistry } from './Nodes.js';
 import type { BuiltInNodeType, BuiltInNodes } from './Nodes.js';
 import type { NodeRegistration } from './NodeRegistration.js';
 import { getPluginConfig } from '../utils/index.js';
 import { GptTokenizerTokenizer } from '../integrations/GptTokenizerTokenizer.js';
+
+// eslint-disable-next-line import/no-cycle -- There has to be a cycle because CodeRunner needs to import the entirety of Rivet
+import { IsomorphicCodeRunner } from '../integrations/CodeRunner.js';
 
 // CJS compatibility, gets default.default for whatever reason
 let PQueue = PQueueImport;
@@ -75,10 +79,16 @@ export type ProcessEvents = {
 
   /** Called when a user input node requires user input. Call the callback when finished, or call userInput() on the GraphProcessor with the results. */
   userInput: {
-    node: UserInputNode;
+    node: ChartNode;
+    inputStrings: string[];
+
+    /** @deprecated use inputStrings instead */
     inputs: Inputs;
+
     callback: (values: StringArrayDataValue) => void;
     processId: ProcessId;
+
+    renderingType: 'text' | 'markdown';
   };
 
   /** Called when a node has partially processed, with the current partial output values for the node. */
@@ -138,7 +148,7 @@ export type ExternalFunction = (
   ...args: unknown[]
 ) => Promise<DataValue & { cost?: number }>;
 
-export type RaceId = Opaque<string, 'RaceId'>;
+export type RaceId = Tagged<string, 'RaceId'>;
 
 export type LoopInfo = AttachedNodeDataItem & {
   /** ID of the controller of the loop */
@@ -174,12 +184,9 @@ export class GraphProcessor {
   readonly #nodesById: Record<NodeId, ChartNode>;
   readonly #nodeInstances: Record<NodeId, NodeImpl<ChartNode>>;
   readonly #connections: Record<NodeId, NodeConnection[]>;
-  readonly #definitions: Record<NodeId, { inputs: NodeInputDefinition[]; outputs: NodeOutputDefinition[] }>;
   readonly #emitter: Emittery<ProcessEvents> = new Emittery();
   #running = false;
   #isSubProcessor = false;
-  readonly #scc: ChartNode[][];
-  readonly #nodesNotInCycle: ChartNode[];
   #externalFunctions: Record<string, ExternalFunction> = {};
   slowMode = false;
   #isPaused = false;
@@ -187,10 +194,15 @@ export class GraphProcessor {
   readonly #registry: NodeRegistration;
   id = nanoid();
 
+  readonly #includeTrace?: boolean = true;
+
   executor?: 'nodejs' | 'browser';
 
   /** If set, specifies the node(s) that the graph will run TO, instead of the nodes without any dependents. */
   runToNodeIds?: NodeId[];
+
+  /** If set, specifies the node that the graph will run FROM, instead of the start nodes. Requires preloading data. */
+  runFromNodeId?: NodeId;
 
   /** The node that is executing this graph, almost always a subgraph node. Undefined for root. */
   #executor:
@@ -207,7 +219,7 @@ export class GraphProcessor {
   warnOnInvalidGraph = false;
 
   // Per-process state
-  #erroredNodes: Map<NodeId, string> = undefined!;
+  #erroredNodes: Map<NodeId, Error | string> = undefined!; // Values are strings in recordings
   #remainingNodes: Set<NodeId> = undefined!;
   #visitedNodes: Set<NodeId> = undefined!;
   #currentlyProcessing: Set<NodeId> = undefined!;
@@ -231,6 +243,11 @@ export class GraphProcessor {
   #totalResponseTokens: number = 0;
 	#totalCost: number = 0;
   #ignoreNodes: Set<NodeId> = undefined!;
+  #hasPreloadedData = false;
+  #loadedProjects: Record<ProjectId, Project> = undefined!;
+  #definitions: Record<NodeId, { inputs: NodeInputDefinition[]; outputs: NodeOutputDefinition[] }> = undefined!;
+  #scc: ChartNode[][] = undefined!;
+  #nodesNotInCycle: ChartNode[] = undefined!;
 
   #nodeAbortControllers = new Map<`${NodeId}-${ProcessId}`, AbortController>();
 
@@ -244,7 +261,7 @@ export class GraphProcessor {
     return this.#running;
   }
 
-  constructor(project: Project, graphId?: GraphId, registry?: NodeRegistration) {
+  constructor(project: Project, graphId?: GraphId, registry?: NodeRegistration, includeTrace?: boolean) {
     this.#project = project;
     const graph = graphId
       ? project.graphs[graphId]
@@ -257,6 +274,7 @@ export class GraphProcessor {
     }
     this.#graph = graph;
 
+    this.#includeTrace = includeTrace;
     this.#nodeInstances = {};
     this.#connections = {};
     this.#nodesById = {};
@@ -264,6 +282,15 @@ export class GraphProcessor {
 
     this.#emitter.bindMethods(this as any, ['on', 'off', 'once', 'onAny', 'offAny']);
 
+    this.setExternalFunction('echo', async (value) => ({ type: 'any', value }) satisfies DataValue);
+
+    this.#emitter.on('globalSet', ({ id, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.#emitter.emit(`globalSet:${id}`, value);
+    });
+  }
+
+  #preprocessGraph() {
     // Create node instances and store them in a lookup table
     for (const node of this.#graph.nodes) {
       this.#nodeInstances[node.id] = this.#registry.createDynamicImpl(node);
@@ -276,13 +303,13 @@ export class GraphProcessor {
         if (this.warnOnInvalidGraph) {
           if (!this.#nodesById[conn.inputNodeId]) {
             console.warn(
-              `Missing node ${conn.inputNodeId} in graph ${graphId} (connection from ${
+              `Missing node ${conn.inputNodeId} in graph ${this.#graph} (connection from ${
                 this.#nodesById[conn.outputNodeId]?.title
               })`,
             );
           } else {
             console.warn(
-              `Missing node ${conn.outputNodeId} in graph ${graphId} (connection to ${
+              `Missing node ${conn.outputNodeId} in graph ${this.#graph} (connection to ${
                 this.#nodesById[conn.inputNodeId]?.title
               }) `,
             );
@@ -297,20 +324,30 @@ export class GraphProcessor {
       this.#connections[conn.outputNodeId]!.push(conn);
     }
 
+    this.#loadInputOutputDefinitions();
+
+    this.#scc = this.#tarjanSCC();
+    this.#nodesNotInCycle = this.#scc.filter((cycle) => cycle.length === 1).flat();
+  }
+
+  #loadInputOutputDefinitions() {
     // Store input and output definitions in a lookup table
     this.#definitions = {};
     for (const node of this.#graph.nodes) {
       const connectionsForNode = this.#connections[node.id] ?? [];
-      const inputDefs = this.#nodeInstances[node.id]!.getInputDefinitions(
+
+      const inputDefs = this.#nodeInstances[node.id]!.getInputDefinitionsIncludingBuiltIn(
         connectionsForNode,
         this.#nodesById,
         this.#project,
+        this.#loadedProjects,
       );
 
       const outputDefs = this.#nodeInstances[node.id]!.getOutputDefinitions(
         connectionsForNode,
         this.#nodesById,
         this.#project,
+        this.#loadedProjects,
       );
 
       this.#definitions[node.id] = { inputs: inputDefs, outputs: outputDefs };
@@ -357,15 +394,13 @@ export class GraphProcessor {
         }
       }
     }
+  }
 
-    this.#scc = this.#tarjanSCC();
-    this.#nodesNotInCycle = this.#scc.filter((cycle) => cycle.length === 1).flat();
-
-    this.setExternalFunction('echo', async (value) => ({ type: 'any', value }) satisfies DataValue);
-
-    this.#emitter.on('globalSet', ({ id, value }) => {
-      this.#emitter.emit(`globalSet:${id}`, value);
-    });
+  #emitTraceEvent(eventData: string) {
+    if (this.#includeTrace) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.#emitter.emit('trace', eventData);
+    }
   }
 
   on = undefined! as Emittery<ProcessEvents>['on'];
@@ -417,9 +452,11 @@ export class GraphProcessor {
     this.#abortSuccessfully = successful;
     this.#abortError = error;
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('graphAbort', { successful, error, graph: this.#graph });
 
     if (!this.#isSubProcessor) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('abort', { successful, error });
     }
 
@@ -429,6 +466,7 @@ export class GraphProcessor {
   pause(): void {
     if (this.#isPaused === false) {
       this.#isPaused = true;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('pause', void 0);
     }
   }
@@ -436,6 +474,7 @@ export class GraphProcessor {
   resume(): void {
     if (this.#isPaused) {
       this.#isPaused = false;
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('resume', void 0);
     }
   }
@@ -460,6 +499,45 @@ export class GraphProcessor {
         break;
       }
     }
+  }
+
+  preloadNodeData(nodeId: NodeId, data: Outputs): void {
+    this.#nodeResults ??= new Map();
+    this.#visitedNodes ??= new Set();
+
+    for (const value of Object.values(data)) {
+      if (!value || !('type' in value) || !value.type) {
+        throw new Error(`Invalid data value for node ${nodeId}, must be a DataValue`);
+      }
+    }
+
+    this.#nodeResults.set(nodeId, data);
+    this.#visitedNodes.add(nodeId);
+    this.#hasPreloadedData = true;
+  }
+
+  /** Gets all node IDs that a given node ID depends on being complete before the given node ID can start. */
+  getDependencyNodesDeep(nodeId: NodeId): NodeId[] {
+    const node = this.#nodesById[nodeId];
+    if (!node) {
+      return [];
+    }
+
+    const connections = this.#connections[nodeId];
+    if (!connections) {
+      return [];
+    }
+
+    const dependencyNodes = connections
+      .map((conn) => {
+        if (conn.inputNodeId === nodeId) {
+          return this.getDependencyNodesDeep(conn.outputNodeId);
+        }
+        return [];
+      })
+      .flat();
+
+    return [...new Set([nodeId, ...dependencyNodes])];
   }
 
   async replayRecording(recorder: ExecutionRecorder): Promise<GraphOutputs> {
@@ -502,6 +580,7 @@ export class GraphProcessor {
 
         await match(event)
           .with({ type: 'start' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('start', {
               project: this.#project,
               contextValues: data.contextValues,
@@ -512,43 +591,52 @@ export class GraphProcessor {
             this.#graphInputs = data.inputs;
           })
           .with({ type: 'abort' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('abort', data);
           })
           .with({ type: 'pause' }, () => {})
           .with({ type: 'resume' }, () => {})
           .with({ type: 'done' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('done', data);
             this.#graphOutputs = data.results;
             this.#running = false;
           })
           .with({ type: 'error' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('error', data);
           })
           .with({ type: 'globalSet' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('globalSet', data);
           })
           .with({ type: 'trace' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('trace', data);
           })
           .with({ type: 'graphStart' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('graphStart', {
               graph: getGraph(data.graphId),
               inputs: data.inputs,
             });
           })
           .with({ type: 'graphFinish' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('graphFinish', {
               graph: getGraph(data.graphId),
               outputs: data.outputs,
             });
           })
           .with({ type: 'graphError' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('graphError', {
               graph: getGraph(data.graphId),
               error: data.error,
             });
           })
           .with({ type: 'graphAbort' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('graphAbort', {
               graph: getGraph(data.graphId),
               error: data.error,
@@ -557,6 +645,7 @@ export class GraphProcessor {
           })
           .with({ type: 'nodeStart' }, async ({ data }) => {
             const node = getNode(data.nodeId);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('nodeStart', {
               node: getNode(data.nodeId),
               inputs: data.inputs,
@@ -570,6 +659,7 @@ export class GraphProcessor {
           })
           .with({ type: 'nodeFinish' }, ({ data }) => {
             const node = getNode(data.nodeId);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('nodeFinish', {
               node,
               outputs: data.outputs,
@@ -580,6 +670,7 @@ export class GraphProcessor {
             this.#visitedNodes.add(data.nodeId);
           })
           .with({ type: 'nodeError' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('nodeError', {
               node: getNode(data.nodeId),
               error: data.error,
@@ -590,6 +681,7 @@ export class GraphProcessor {
             this.#visitedNodes.add(data.nodeId);
           })
           .with({ type: 'nodeExcluded' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('nodeExcluded', {
               node: getNode(data.nodeId),
               processId: data.processId,
@@ -603,27 +695,34 @@ export class GraphProcessor {
           .with({ type: 'nodeOutputsCleared' }, () => {})
           .with({ type: 'partialOutput' }, () => {})
           .with({ type: 'userInput' }, ({ data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('userInput', {
               callback: undefined!,
+              inputStrings: data.inputStrings,
               inputs: data.inputs,
               node: getNode(data.nodeId) as UserInputNode,
               processId: data.processId,
+              renderingType: data.renderingType,
             });
           })
           .with({ type: P.string.startsWith('globalSet:') }, ({ type, data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit(type, data);
           })
           .with({ type: P.string.startsWith('userEvent:') }, ({ type, data }) => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit(type, data);
           })
           .with({ type: 'newAbortController' }, () => {})
           .with({ type: 'finish' }, () => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('finish', undefined);
           })
-//          .with(undefined, () => {})
+          .with(P.nullish, () => {})
           .exhaustive();
       }
     } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('error', { error: getError(err) });
     } finally {
       this.#running = false;
@@ -634,9 +733,13 @@ export class GraphProcessor {
 
   #initProcessState() {
     this.#running = true;
-    this.#nodeResults = new Map();
+
+    if (!this.#hasPreloadedData) {
+      this.#nodeResults = new Map();
+      this.#visitedNodes = new Set();
+    }
+
     this.#erroredNodes = new Map();
-    this.#visitedNodes = new Set();
     this.#currentlyProcessing = new Set();
     this.#remainingNodes = new Set(this.#graph.nodes.map((n) => n.id));
     this.#pendingUserInputs = {};
@@ -658,6 +761,7 @@ export class GraphProcessor {
     this.#abortError = undefined;
     this.#abortSuccessfully = false;
     this.#nodeAbortControllers = new Map();
+    this.#loadedProjects = {};
   }
 
   /** Main function for running a graph. Runs a graph and returns the outputs from the output nodes of the graph. */
@@ -684,12 +788,17 @@ export class GraphProcessor {
 
       if (this.#context.tokenizer) {
         this.#context.tokenizer.on('error', (error) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.#emitter.emit('error', { error });
         });
       }
 
+      await this.#loadProjectReferences();
+
+      this.#preprocessGraph();
+
       if (!this.#isSubProcessor) {
-        this.#emitter.emit('start', {
+        await this.#emitter.emit('start', {
           contextValues: this.#contextValues,
           inputs: this.#graphInputs,
           project: this.#project,
@@ -697,7 +806,27 @@ export class GraphProcessor {
         });
       }
 
-      this.#emitter.emit('graphStart', { graph: this.#graph, inputs: this.#graphInputs });
+      await this.#emitter.emit('graphStart', { graph: this.#graph, inputs: this.#graphInputs });
+
+      if (this.#hasPreloadedData) {
+        for (const node of this.#graph.nodes) {
+          if (this.#nodeResults.has(node.id)) {
+            this.#emitTraceEvent(`Node ${node.title} has preloaded data`);
+
+            await this.#emitter.emit('nodeStart', {
+              node,
+              inputs: {},
+              processId: 'preload' as ProcessId,
+            });
+
+            await this.#emitter.emit('nodeFinish', {
+              node,
+              outputs: this.#nodeResults.get(node.id)!,
+              processId: 'preload' as ProcessId,
+            });
+          }
+        }
+      }
 
       const startNodes = this.runToNodeIds
         ? this.#graph.nodes.filter((node) => this.runToNodeIds?.includes(node.id))
@@ -706,10 +835,13 @@ export class GraphProcessor {
       await this.#waitUntilUnpaused();
 
       for (const startNode of startNodes) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.#processingQueue.add(async () => {
           await this.#fetchNodeDataAndProcessNode(startNode);
         });
       }
+
+      await this.#processingQueue.onIdle();
 
       // Anything not queued at this phase here should be ignored
       if (this.runToNodeIds) {
@@ -721,28 +853,31 @@ export class GraphProcessor {
         }
       }
 
-      await this.#processingQueue.onIdle();
-
       // If we've aborted successfully, we can treat the graph like it succeeded
       const erroredNodes = [...this.#erroredNodes.entries()].filter(([nodeId]) => {
         const erroredNodeAttachedData = this.#getAttachedDataTo(nodeId);
         return erroredNodeAttachedData.races == null || erroredNodeAttachedData.races.completed === false;
       });
       if (erroredNodes.length && !this.#abortSuccessfully) {
-        const error =
-          this.#abortError ??
-          Error(
-            `Graph ${this.#graph.metadata!.name} (${
+        let error = this.#abortError;
+        if (!error) {
+          const message = `Graph ${this.#graph.metadata!.name} (${
               this.#graph.metadata!.id
-            }) failed to process due to errors in nodes: ${erroredNodes
-              .map(([nodeId, error]) => `${this.#nodesById[nodeId]!.title} (${nodeId}): ${error}`)
-              .join(', ')}`,
-          );
-
-        this.#emitter.emit('graphError', { graph: this.#graph, error });
+            }) failed to process due to errors in nodes:\n${erroredNodes
+              .map(([nodeId]) => `- ${this.#nodesById[nodeId]!.title} (${nodeId})`)
+              .join('\n')}`;
+          if (erroredNodes.length === 1) {
+            const [, nodeError] = erroredNodes[0]!;
+            error = new Error(message, { cause: nodeError });
+          } else {
+            error = new AggregateError(erroredNodes.map(([, nodeError]) => nodeError), message);
+          }
+        }
+        
+        await this.#emitter.emit('graphError', { graph: this.#graph, error });
 
         if (!this.#isSubProcessor) {
-          this.#emitter.emit('error', { error });
+          await this.#emitter.emit('error', { error });
         }
 
         throw error;
@@ -773,11 +908,11 @@ export class GraphProcessor {
 
       this.#running = false;
 
-      this.#emitter.emit('graphFinish', { graph: this.#graph, outputs: outputValues });
+      await this.#emitter.emit('graphFinish', { graph: this.#graph, outputs: outputValues });
 
       if (!this.#isSubProcessor) {
-        this.#emitter.emit('done', { results: outputValues });
-        this.#emitter.emit('finish', undefined);
+        await this.#emitter.emit('done', { results: outputValues });
+        await this.#emitter.emit('finish', undefined);
       }
 
       return outputValues;
@@ -785,7 +920,39 @@ export class GraphProcessor {
       this.#running = false;
 
       if (!this.#isSubProcessor) {
-        this.#emitter.emit('finish', undefined);
+        await this.#emitter.emit('finish', undefined);
+      }
+    }
+  }
+
+  async #loadProjectReferences() {
+    if ((this.#project.references?.length ?? 0) > 0) {
+      if (!this.#context.projectReferenceLoader) {
+        throw new Error(
+          'Project references are set, but no projectReferenceLoader is set in the context. Since this project uses project references, you must provide a projectReferenceLoader in the context.',
+        );
+      }
+
+      const seenProjectIds = new Set<ProjectId>();
+
+      const loadProject = async (ref: ProjectReference) => {
+        if (seenProjectIds.has(ref.id)) {
+          return;
+        }
+
+        seenProjectIds.add(ref.id);
+
+        const project = await this.#context.projectReferenceLoader!.loadProject(this.#context.projectPath, ref);
+
+        this.#loadedProjects[project.metadata!.id!] = project;
+
+        for (const reference of project.references ?? []) {
+          await loadProject(reference);
+        }
+      };
+
+      for (const reference of this.#project.references!) {
+        await loadProject(reference);
       }
     }
   }
@@ -818,10 +985,8 @@ export class GraphProcessor {
     if (!inputsReady) {
       return;
     }
-    this.#emitter.emit(
-      'trace',
-      `Node ${node.title} has required inputs nodes: ${inputNodes.map((n) => n.title).join(', ')}`,
-    );
+
+    this.#emitTraceEvent(`Node ${node.title} has required inputs nodes: ${inputNodes.map((n) => n.title).join(', ')}`);
 
     const attachedData = this.#getAttachedDataTo(node);
 
@@ -844,10 +1009,12 @@ export class GraphProcessor {
 
     this.#queuedNodes.add(node.id);
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#processingQueue.addAll(
       inputNodes.map((inputNode) => {
         return async () => {
-          this.#emitter.emit('trace', `Fetching required data for node ${inputNode.title} (${inputNode.id})`);
+          this.#emitTraceEvent(`Fetching required data for node ${inputNode.title} (${inputNode.id})`);
+
           await this.#fetchNodeDataAndProcessNode(inputNode);
         };
       }),
@@ -861,23 +1028,32 @@ export class GraphProcessor {
     const builtInNode = node as BuiltInNodes;
 
     if (this.#ignoreNodes.has(node.id)) {
-      this.#emitter.emit('trace', `Node ${node.title} is ignored`);
+      this.#emitTraceEvent(`Node ${node.title} is ignored`);
       return;
     }
 
+    if (this.runToNodeIds) {
+      const dependencyNodes = this.getDependencyNodesDeep(node.id);
+
+      if (this.runToNodeIds.some((runTo) => runTo !== node.id && dependencyNodes.includes(runTo))) {
+        this.#emitTraceEvent(`Node ${node.title} is excluded due to runToNodeIds`);
+        return;
+      }
+    }
+
     if (this.#currentlyProcessing.has(node.id)) {
-      this.#emitter.emit('trace', `Node ${node.title} is already being processed`);
+      this.#emitTraceEvent(`Node ${node.title} is already being processed`);
       return;
     }
 
     // For a loop controller, it can run multiple times, otherwise we already processed this node so bail out
     if (this.#visitedNodes.has(node.id) && node.type !== 'loopController') {
-      this.#emitter.emit('trace', `Node ${node.title} has already been processed`);
+      this.#emitTraceEvent(`Node ${node.title} has already been processed`);
       return;
     }
 
     if (this.#erroredNodes.has(node.id)) {
-      this.#emitter.emit('trace', `Node ${node.title} has already errored`);
+      this.#emitTraceEvent(`Node ${node.title} has already errored`);
       return;
     }
 
@@ -886,7 +1062,7 @@ export class GraphProcessor {
     // Check if all input nodes are free of errors
     for (const inputNode of inputNodes) {
       if (this.#erroredNodes.has(inputNode.id)) {
-        this.#emitter.emit('trace', `Node ${node.title} has errored input node ${inputNode.title}`);
+        this.#emitTraceEvent(`Node ${node.title} has errored input node ${inputNode.title}`);
         return;
       }
     }
@@ -899,8 +1075,7 @@ export class GraphProcessor {
     });
 
     if (!inputsReady) {
-      this.#emitter.emit(
-        'trace',
+      this.#emitTraceEvent(
         `Node ${node.title} has required inputs nodes: ${inputNodes.map((n) => n.title).join(', ')}`,
       );
       return;
@@ -910,7 +1085,7 @@ export class GraphProcessor {
     const inputValues = this.#getInputValuesForNode(node);
 
     if (this.#excludedDueToControlFlow(node, inputValues, nanoid() as ProcessId, 'loop-not-broken')) {
-      this.#emitter.emit('trace', `Node ${node.title} is excluded due to control flow`);
+      this.#emitTraceEvent(`Node ${node.title} is excluded due to control flow`);
       return;
     }
 
@@ -941,7 +1116,7 @@ export class GraphProcessor {
     }
 
     if (waitingForInputNode) {
-      this.#emitter.emit('trace', `Node ${node.title} is waiting for input node ${waitingForInputNode}`);
+      this.#emitTraceEvent(`Node ${node.title} is waiting for input node ${waitingForInputNode}`);
       return;
     }
 
@@ -958,7 +1133,7 @@ export class GraphProcessor {
     }
 
     if (attachedData.races?.completed) {
-      this.#emitter.emit('trace', `Node ${node.title} is part of a race that was completed`);
+      this.#emitTraceEvent(`Node ${node.title} is part of a race that was completed`);
       return;
     }
 
@@ -967,8 +1142,7 @@ export class GraphProcessor {
     if (this.slowMode) {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
-
-    this.#emitter.emit('trace', `Finished processing node ${node.title} (${node.id})`);
+    this.#emitTraceEvent(`Finished processing node ${node.title} (${node.id})`);
     this.#visitedNodes.add(node.id);
     this.#currentlyProcessing.delete(node.id);
     this.#remainingNodes.delete(node.id);
@@ -981,15 +1155,17 @@ export class GraphProcessor {
 
       // If the loop controller is excluded, we have to "break" it or else it'll loop forever...
       const breakValue = loopControllerResults['break' as PortId];
+
       const didBreak =
+        // @ts-ignore
         !(breakValue?.type === 'control-flow-excluded' && breakValue?.value === 'loop-not-broken') ??
         this.#excludedDueToControlFlow(node, this.#getInputValuesForNode(node), nanoid() as ProcessId);
 
       if (!didBreak) {
-        this.#emitter.emit('trace', `Loop controller ${node.title} did not break, so we're looping again`);
+        this.#emitTraceEvent(`Loop controller ${node.title} did not break, so we're looping again`);
         for (const loopNodeId of attachedData.loopInfo?.nodes ?? []) {
           const cycleNode = this.#nodesById[loopNodeId]!;
-          this.#emitter.emit('trace', `Clearing cycle node ${cycleNode.title} (${cycleNode.id})`);
+          this.#emitTraceEvent(`Clearing cycle node ${cycleNode.title} (${cycleNode.id})`);
           this.#visitedNodes.delete(cycleNode.id);
           this.#currentlyProcessing.delete(cycleNode.id);
           this.#remainingNodes.add(cycleNode.id);
@@ -1007,7 +1183,7 @@ export class GraphProcessor {
       for (const [nodeId] of allNodesForRace) {
         for (const [key, abortController] of this.#nodeAbortControllers.entries()) {
           if (key.startsWith(nodeId)) {
-            this.#emitter.emit('trace', `Aborting node ${nodeId} because other race branch won`);
+            this.#emitTraceEvent(`Aborting node ${nodeId} because other race branch won`);
             abortController.abort();
           }
         }
@@ -1071,12 +1247,10 @@ export class GraphProcessor {
     }
 
     // Node is finished, check if we can run any more nodes that depend on this one
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#processingQueue.addAll(
       outputNodes.nodes.map((outputNode) => async () => {
-        this.#emitter.emit(
-          'trace',
-          `Trying to run output node from ${node.title}: ${outputNode.title} (${outputNode.id})`,
-        );
+        this.#emitTraceEvent(`Trying to run output node from ${node.title}: ${outputNode.title} (${outputNode.id})`);
 
         await this.#processNodeIfAllInputsAvailable(outputNode);
       }),
@@ -1113,65 +1287,13 @@ export class GraphProcessor {
       return processId;
     }
 
-    if (this.#isNodeOfType('userInput', node)) {
-      await this.#processUserInputNode(node, processId);
-    } else if (node.isSplitRun) {
+    if (node.isSplitRun) {
       await this.#processSplitRunNode(node, processId);
     } else {
       await this.#processNormalNode(node, processId);
     }
 
     return processId;
-  }
-
-  #isNodeOfType<T extends BuiltInNodes['type']>(type: T, node: ChartNode): node is Extract<BuiltInNodes, { type: T }> {
-    return node.type === type;
-  }
-
-  async #processUserInputNode(node: UserInputNode, processId: ProcessId) {
-    try {
-      const inputValues = this.#getInputValuesForNode(node);
-      if (this.#excludedDueToControlFlow(node, inputValues, processId)) {
-        return;
-      }
-
-      this.#emitter.emit('nodeStart', { node, inputs: inputValues, processId });
-
-      const results = await new Promise<StringArrayDataValue>((resolve, reject) => {
-        this.#pendingUserInputs[node.id] = {
-          resolve,
-          reject,
-        };
-
-        this.#abortController.signal.addEventListener('abort', () => {
-          delete this.#pendingUserInputs[node.id];
-          reject(new Error('Processing aborted'));
-        });
-
-        this.#emitter.emit('userInput', {
-          node,
-          inputs: inputValues,
-          callback: (results) => {
-            resolve(results);
-
-            delete this.#pendingUserInputs[node.id];
-          },
-          processId,
-        });
-      });
-
-      const outputValues = (this.#nodeInstances[node.id] as UserInputNodeImpl).getOutputValuesFromUserInput(
-        inputValues,
-        results,
-      );
-
-      this.#nodeResults.set(node.id, outputValues);
-      this.#visitedNodes.add(node.id);
-
-      this.#emitter.emit('nodeFinish', { node, outputs: outputValues, processId });
-    } catch (e) {
-      this.#nodeErrored(node, e, processId);
-    }
   }
 
   async #processSplitRunNode(node: ChartNode, processId: ProcessId) {
@@ -1186,6 +1308,7 @@ export class GraphProcessor {
       node.splitRunMax ?? 10,
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('nodeStart', { node, inputs: inputValues, processId });
 
     try {
@@ -1221,8 +1344,10 @@ export class GraphProcessor {
               inputs as Inputs,
               i,
               processId,
-              (node, partialOutputs, index) =>
-                this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId }),
+              (node, partialOutputs, index) => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId });
+              },
             );
 
             if (output['requestTokens' as PortId]?.type === 'number') {
@@ -1255,8 +1380,10 @@ export class GraphProcessor {
                 inputs as Inputs,
                 i,
                 processId,
-                (node, partialOutputs, index) =>
-                  this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId }),
+                (node, partialOutputs, index) => {
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId });
+                },
               );
 
 							if (output['requestTokens' as PortId]?.type === 'number') {
@@ -1281,7 +1408,7 @@ export class GraphProcessor {
         const e = errors[0]!;
         throw e;
       } else if (errors.length > 0) {
-        throw new Error(errors.join('\n'));
+        throw new AggregateError(errors);
       }
 
       // Combine the parallel results into the final output
@@ -1301,6 +1428,7 @@ export class GraphProcessor {
       this.#totalRequestTokens += sum(results.map((r) => coerceTypeOptional(r.output?.['requestTokens' as PortId], 'number') ?? 0));
       this.#totalResponseTokens += sum(results.map((r) => coerceTypeOptional(r.output?.['responseTokens' as PortId], 'number') ?? 0));
       this.#totalCost += sum(results.map((r) => coerceTypeOptional(r.output?.['cost' as PortId], 'number') ?? 0));
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('nodeFinish', { node, outputs: aggregateResults, processId });
     } catch (error) {
       this.#nodeErrored(node, error, processId);
@@ -1314,6 +1442,7 @@ export class GraphProcessor {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('nodeStart', { node, inputs: inputValues, processId });
 
     try {
@@ -1322,8 +1451,10 @@ export class GraphProcessor {
         inputValues,
         0,
         processId,
-        (node, partialOutputs, index) =>
-          this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId }),
+        (node, partialOutputs, index) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.#emitter.emit('partialOutput', { node, outputs: partialOutputs, index, processId });
+        },
       );
 
       this.#nodeResults.set(node.id, outputValues);
@@ -1338,6 +1469,7 @@ export class GraphProcessor {
       if (outputValues['cost' as PortId]?.type === 'number') {
         this.#totalCost += coerceTypeOptional(outputValues['cost' as PortId], 'number') ?? 0;
       }
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.#emitter.emit('nodeFinish', { node, outputs: outputValues, processId });
     } catch (error) {
       this.#nodeErrored(node, error, processId);
@@ -1346,9 +1478,10 @@ export class GraphProcessor {
 
   #nodeErrored(node: ChartNode, e: unknown, processId: ProcessId) {
     const error = getError(e);
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('nodeError', { node, error, processId });
-    this.#emitter.emit('trace', `Node ${node.title} (${node.id}-${processId}) errored: ${error.stack}`);
-    this.#erroredNodes.set(node.id, error.toString());
+    this.#emitTraceEvent(`Node ${node.title} (${node.id}-${processId}) errored: ${error.stack}`);
+    this.#erroredNodes.set(node.id, error);
   }
 
   getRootProcessor(): GraphProcessor {
@@ -1361,6 +1494,7 @@ export class GraphProcessor {
 
   /** Raise a user event on the processor, all subprocessors, and their children. */
   raiseEvent(event: string, data: DataValue) {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit(`userEvent:${event}`, data);
 
     for (const subprocessor of this.#subprocessors) {
@@ -1370,6 +1504,7 @@ export class GraphProcessor {
 
   #newAbortController() {
     const controller = new AbortController();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('newAbortController', controller);
     return controller;
   }
@@ -1394,7 +1529,11 @@ export class GraphProcessor {
     let tokenizer = this.#context.tokenizer;
     if (!tokenizer) {
       tokenizer = new GptTokenizerTokenizer();
-      tokenizer.on('error', (e) => this.#emitter.emit('error', { error: e }));
+
+      tokenizer.on('error', (e) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.#emitter.emit('error', { error: e });
+      });
     }
 
     const context: InternalProcessContext = {
@@ -1407,6 +1546,8 @@ export class GraphProcessor {
       graphInputs: this.#graphInputs,
       graphOutputs: this.#graphOutputs,
       attachedData: this.#getAttachedDataTo(node),
+      codeRunner: this.#context.codeRunner ?? new IsomorphicCodeRunner(),
+      referencedProjects: this.#loadedProjects,
       waitEvent: async (event) => {
         return new Promise((resolve, reject) => {
           this.#emitter.once(`userEvent:${event}`).then(resolve).catch(reject);
@@ -1428,6 +1569,7 @@ export class GraphProcessor {
         if (useAsGraphPartialOutput && this.#executor && this.#parent) {
           const executorNode = this.#parent.#nodesById[this.#executor.nodeId];
           if (executorNode) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit('partialOutput', {
               index: this.#executor.index,
               node: executorNode,
@@ -1442,6 +1584,7 @@ export class GraphProcessor {
       getGlobal: (id) => this.#globals.get(id),
       setGlobal: (id, value) => {
         this.#globals.set(id, value);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.#emitter.emit('globalSet', { id, value, processId });
       },
       waitForGlobal: async (id) => {
@@ -1451,8 +1594,11 @@ export class GraphProcessor {
         await this.getRootProcessor().#emitter.once(`globalSet:${id}`);
         return this.#globals.get(id)!;
       },
-      createSubProcessor: (subGraphId: GraphId | undefined, { signal }: { signal?: AbortSignal } = {}) => {
-        const processor = new GraphProcessor(this.#project, subGraphId, this.#registry);
+      createSubProcessor: (
+        subGraphId: GraphId | undefined,
+        { signal, project }: { signal?: AbortSignal; project?: Project } = {},
+      ) => {
+        const processor = new GraphProcessor(project ?? this.#project, subGraphId, this.#registry);
         processor.executor = this.executor;
         processor.#isSubProcessor = true;
         processor.#executionCache = this.#executionCache;
@@ -1475,6 +1621,7 @@ export class GraphProcessor {
         processor.on('graphStart', (e) => this.#emitter.emit('graphStart', e));
         processor.on('graphFinish', (e) => this.#emitter.emit('graphFinish', e));
         processor.on('globalSet', (e) => this.#emitter.emit('globalSet', e));
+        processor.on('newAbortController', (e) => this.#emitter.emit('newAbortController', e));
         processor.on('pause', () => {
           if (!this.#isPaused) {
             this.pause();
@@ -1488,6 +1635,7 @@ export class GraphProcessor {
 
         processor.onAny((event, data) => {
           if (event.startsWith('globalSet:')) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.#emitter.emit(event, data);
           }
         });
@@ -1495,11 +1643,17 @@ export class GraphProcessor {
         this.#subprocessors.add(processor);
 
         if (signal) {
-          signal.addEventListener('abort', () => processor.abort());
+          signal.addEventListener('abort', () => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            processor.abort();
+          });
         }
 
         // If parent is aborted, abort subgraph with error (it's fine, success state is on the parent)
-        this.#abortController.signal.addEventListener('abort', () => processor.abort());
+        this.#abortController.signal.addEventListener('abort', () => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          processor.abort();
+        });
 
         this.on('pause', () => processor.pause());
         this.on('resume', () => processor.resume());
@@ -1507,12 +1661,42 @@ export class GraphProcessor {
         return processor;
       },
       trace: (message) => {
-        this.#emitter.emit('trace', message);
+        this.#emitTraceEvent(message);
       },
       abortGraph: (error) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.abort(error === undefined, error);
       },
       getPluginConfig: (name) => getPluginConfig(plugin, this.#context.settings, name),
+      requestUserInput: async (inputStrings, renderingType) => {
+        const results = await new Promise<StringArrayDataValue>((resolve, reject) => {
+          this.#pendingUserInputs[node.id] = {
+            resolve,
+            reject,
+          };
+
+          this.#abortController.signal.addEventListener('abort', () => {
+            delete this.#pendingUserInputs[node.id];
+            reject(new Error('Processing aborted'));
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.#emitter.emit('userInput', {
+            node,
+            inputStrings,
+            inputs: inputValues,
+            renderingType,
+            callback: (results) => {
+              resolve(results);
+
+              delete this.#pendingUserInputs[node.id];
+            },
+            processId,
+          });
+        });
+
+        return results;
+      },
     };
 
     await this.#waitUntilUnpaused();
@@ -1534,12 +1718,23 @@ export class GraphProcessor {
     typeOfExclusion: ControlFlowExcludedDataValue['value'] = undefined,
   ) {
     if (node.disabled) {
-      this.#emitter.emit('trace', `Excluding node ${node.title} because it's disabled`);
+      this.#emitTraceEvent(`Excluding node ${node.title} because it's disabled`);
 
       this.#visitedNodes.add(node.id);
       this.#markAsExcluded(node, processId, inputValues, 'disabled');
 
       return true;
+    }
+
+    if (node.isConditional && typeOfExclusion === undefined) {
+      const ifValue = coerceTypeOptional(inputValues[IF_PORT.id], 'boolean');
+      if (ifValue === false) {
+        this.#emitTraceEvent(`Excluding node ${node.title} because if port is false`);
+
+        this.#visitedNodes.add(node.id);
+        this.#markAsExcluded(node, processId, inputValues, 'if port is false');
+        return true;
+      }
     }
 
     const inputsWithValues = entries(inputValues);
@@ -1568,8 +1763,7 @@ export class GraphProcessor {
     if (inputIsExcludedValue && !allowedToConsumedExcludedValue) {
       if (!isWaitingForLoop) {
         if (inputIsExcludedValue) {
-          this.#emitter.emit(
-            'trace',
+          this.#emitTraceEvent(
             `Excluding node ${node.title} because of control flow. Input is has excluded value: ${controlFlowExcludedValues[0]?.[0]}`,
           );
         }
@@ -1597,6 +1791,7 @@ export class GraphProcessor {
 
     this.#nodeResults.set(node.id, outputs);
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.#emitter.emit('nodeExcluded', {
       node,
       processId,

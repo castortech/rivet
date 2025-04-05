@@ -14,6 +14,8 @@ import {
   type AudioDataValue,
   isArrayDataType,
   type ScalarOrArrayDataValue,
+  type DocumentDataValue,
+  type ChatMessageDataValue,
 } from '@ironclad/rivet-core';
 import { css } from '@emotion/react';
 import { keys } from '../../../core/src/utils/typeSafety';
@@ -23,6 +25,7 @@ import { P, match } from 'ts-pattern';
 import clsx from 'clsx';
 import { type InputsOrOutputsWithRefs, type DataValueWithRefs, type ScalarDataValueWithRefs } from '../state/dataFlow';
 import { getGlobalDataRef } from '../utils/globals';
+import prettyBytes from 'pretty-bytes';
 
 const styles = css`
   .chat-message.user header em {
@@ -88,6 +91,7 @@ type ScalarRendererProps<T extends DataType = DataType> = {
   depth?: number;
   renderMarkdown?: boolean;
   truncateLength?: number;
+  isCompact?: boolean;
 };
 
 /* eslint-disable react-hooks/rules-of-hooks -- These are components (ish) */
@@ -96,8 +100,13 @@ const scalarRenderers: {
 } = {
   boolean: ({ value }) => <>{value.value ? 'true' : 'false'}</>,
   number: ({ value }) => <>{value.value}</>,
-  string: ({ value, renderMarkdown, truncateLength }) => {
-    const truncated = truncateLength ? value.value.slice(0, truncateLength) + '...' : value.value;
+  string: ({ value, renderMarkdown, truncateLength, isCompact }) => {
+    let truncated = truncateLength ? value.value.slice(0, truncateLength) + '...' : value.value;
+
+    if (isCompact) {
+      // Take first 2 lines only
+      truncated = truncated.split('\n').slice(0, 2).join('\n');
+    }
 
     const markdownRendered = useMarkdown(truncated, renderMarkdown);
 
@@ -107,16 +116,28 @@ const scalarRenderers: {
 
     return <pre className="pre-wrap">{truncated}</pre>;
   },
-  'chat-message': ({ value, renderMarkdown }) => {
-    const parts = Array.isArray(value.value.message) ? value.value.message : [value.value.message];
+  'chat-message': ({ value, renderMarkdown, isCompact }) => {
+    const resolved = getGlobalDataRef(value.value.ref);
 
-    const message = value.value;
+    if (!resolved) {
+      return <div>Could not find data.</div>;
+    }
+
+    const { value: realValue } = resolved as ChatMessageDataValue;
+
+    let parts = Array.isArray(realValue.message) ? realValue.message : [realValue.message];
+
+    if (isCompact && parts.length > 1) {
+      parts = parts.slice(0, 1);
+    }
+
+    const message = realValue;
 
     const messageContent = (
       <div className="message-content">
         {parts.map((part, i) => (
           <div className="chat-message-message-part" key={i}>
-            <RenderChatMessagePart part={part} renderMarkdown={renderMarkdown} />
+            <RenderChatMessagePart part={part} renderMarkdown={renderMarkdown} isCompact={isCompact} />
           </div>
         ))}
       </div>
@@ -198,11 +219,19 @@ const scalarRenderers: {
       <RenderDataValue value={inferred as DataValueWithRefs} depth={(depth ?? 0) + 1} renderMarkdown={renderMarkdown} />
     );
   },
-  object: ({ value }) => (
-    <div className="rendered-object-type">
-      <ColorizedPreformattedText text={JSON.stringify(value.value, null, 2)} language="json" />
-    </div>
-  ),
+  object: ({ value, isCompact }) => {
+    let stringified = JSON.stringify(value.value, null, 2);
+
+    if (isCompact) {
+      stringified = stringified.split('\n').slice(0, 2).join('\n') + '\n...';
+    }
+
+    return (
+      <div className="rendered-object-type">
+        <ColorizedPreformattedText text={stringified} language="json" />
+      </div>
+    );
+  },
   'gpt-function': ({ value }) => (
     <>
       GPT Function: <em>{value.value.name}</em>
@@ -276,17 +305,39 @@ const scalarRenderers: {
   'graph-reference': ({ value }) => {
     return <div>(Reference to graph &quot;{value.value.graphName}&quot;)</div>;
   },
+  document: ({ value }) => {
+    const resolved = getGlobalDataRef(value.value.ref);
+    if (!resolved) {
+      return <div>Could not find data.</div>;
+    }
+
+    const {
+      value: { context, data, title, enableCitations, mediaType },
+    } = resolved as DocumentDataValue;
+
+    return (
+      <div>
+        <p>
+          {title ? `Document: ${title}` : 'Document'} ({mediaType})
+        </p>
+        {context && <p>{context}</p>}
+        {enableCitations && <p>(Citations enabled)</p>}
+        Size: {data.length > 0 ? prettyBytes(data.length) : '0 bytes'}
+      </div>
+    );
+  },
 };
 /* eslint-enable react-hooks/rules-of-hooks -- These are components (ish) */
 
-const RenderChatMessagePart: FC<{ part: ChatMessageMessagePart; renderMarkdown?: boolean }> = ({
+const RenderChatMessagePart: FC<{ part: ChatMessageMessagePart; renderMarkdown?: boolean; isCompact?: boolean }> = ({
   part,
   renderMarkdown,
+  isCompact,
 }) => {
   return match(part)
     .with(P.string, (part) => {
       const Renderer = scalarRenderers.string;
-      return <Renderer value={{ type: 'string', value: part }} renderMarkdown={renderMarkdown} />;
+      return <Renderer value={{ type: 'string', value: part }} renderMarkdown={renderMarkdown} isCompact={isCompact} />;
     })
     .with({ type: 'image' }, (part) => {
       const blob = new Blob([part.data], { type: part.mediaType });
@@ -301,6 +352,20 @@ const RenderChatMessagePart: FC<{ part: ChatMessageMessagePart; renderMarkdown?:
     .with({ type: 'url' }, (part) => {
       return <img className="chat-message-url-image" src={part.url} alt={part.url} />;
     })
+    .with({ type: 'document' }, (part) => {
+      const { data, mediaType, context, title, enableCitations } = part;
+
+      return (
+        <div>
+          <p>
+            {title ? `Document: ${title}` : 'Document'} ({mediaType})
+          </p>
+          {context && <p>{context}</p>}
+          {enableCitations && <p>(Citations enabled)</p>}
+          Size: {data.length > 0 ? prettyBytes(data.length) : '0 bytes'}
+        </div>
+      );
+    })
     .exhaustive();
 };
 
@@ -309,7 +374,8 @@ export const RenderDataValue: FC<{
   depth?: number;
   renderMarkdown?: boolean;
   truncateLength?: number;
-}> = ({ value, depth, renderMarkdown, truncateLength }) => {
+  isCompact?: boolean;
+}> = ({ value, depth, renderMarkdown, truncateLength, isCompact }) => {
   if ((depth ?? 0) > 100) {
     return <>ERROR: FAILED TO RENDER {JSON.stringify(value)}</>;
   }
@@ -317,9 +383,15 @@ export const RenderDataValue: FC<{
     return <>undefined</>;
   }
 
-  const keys = Object.keys(value?.value ?? {});
   if (isArrayDataType(value.type)) {
-    const items = arrayizeDataValue(value as ScalarOrArrayDataValue);
+    let items = arrayizeDataValue(value as ScalarOrArrayDataValue);
+
+    const count = items.length;
+
+    if (isCompact) {
+      items = items.slice(0, 1);
+    }
+
     return (
       <div
         css={multiOutput}
@@ -328,7 +400,7 @@ export const RenderDataValue: FC<{
         })}
       >
         <div className="array-info">
-          ({items.length.toLocaleString()} element{items.length === 1 ? '' : 's'})
+          ({count.toLocaleString()} element{count === 1 ? '' : 's'})
         </div>
         {items.map((v, i) => (
           <div className="multi-output-item" key={i}>
@@ -338,6 +410,7 @@ export const RenderDataValue: FC<{
               depth={(depth ?? 0) + 1}
               renderMarkdown={renderMarkdown}
               truncateLength={truncateLength}
+              isCompact={isCompact}
             />
           </div>
         ))}
@@ -367,6 +440,7 @@ export const RenderDataValue: FC<{
         depth={(depth ?? 0) + 1}
         renderMarkdown={renderMarkdown}
         truncateLength={truncateLength}
+        isCompact={isCompact}
       />
     </div>
   );
@@ -376,15 +450,20 @@ export const RenderDataOutputs: FC<{
   definitions?: NodeOutputDefinition[];
   outputs: InputsOrOutputsWithRefs;
   renderMarkdown?: boolean;
-}> = ({ definitions, outputs, renderMarkdown }) => {
-  const outputPorts = keys(outputs);
+  isCompact: boolean;
+}> = ({ definitions, outputs, renderMarkdown, isCompact }) => {
+  let outputPorts = keys(outputs);
 
   if (outputPorts.length === 1) {
     return (
       <div>
-        <RenderDataValue value={outputs[outputPorts[0]!]!} renderMarkdown={renderMarkdown} />
+        <RenderDataValue value={outputs[outputPorts[0]!]!} renderMarkdown={renderMarkdown} isCompact={isCompact} />
       </div>
     );
+  }
+
+  if (isCompact) {
+    outputPorts = outputPorts.slice(0, 1);
   }
 
   return (
@@ -398,7 +477,7 @@ export const RenderDataOutputs: FC<{
             <div>
               <em className="port-id-label">{label}</em>
             </div>
-            <RenderDataValue value={outputs![portId]!} renderMarkdown={renderMarkdown} />
+            <RenderDataValue value={outputs![portId]!} renderMarkdown={renderMarkdown} isCompact={isCompact} />
           </div>
         );
       })}

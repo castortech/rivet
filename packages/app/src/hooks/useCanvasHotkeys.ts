@@ -1,23 +1,36 @@
 import { useEffect } from 'react';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
   type CanvasPosition,
   canvasPositionState,
   searchingGraphState,
   editingNodeState,
   hoveringNodeState,
+  goToSearchState,
+  selectedNodesState,
 } from '../state/graphBuilder';
 import { useLatest } from 'ahooks';
 import { useViewportBounds } from './useViewportBounds';
 import { useCanvasPositioning } from './useCanvasPositioning';
+import { useRedo, useUndo } from '../commands/Command';
+import { nodesState } from '../state/graph';
+import { showAiGraphCreatorInputState } from '../components/AiGraphCreatorInput';
 
 export function useCanvasHotkeys() {
-  const [canvasPosition, setCanvasPosition] = useRecoilState(canvasPositionState);
+  const [canvasPosition, setCanvasPosition] = useAtom(canvasPositionState);
   const viewportBounds = useViewportBounds();
   const { canvasToClientPosition } = useCanvasPositioning();
-  const setSearching = useSetRecoilState(searchingGraphState);
-  const setEditingNode = useSetRecoilState(editingNodeState);
-  const hoveringNode = useRecoilValue(hoveringNodeState);
+  const setSearching = useSetAtom(searchingGraphState);
+  const setEditingNode = useSetAtom(editingNodeState);
+  const hoveringNode = useAtomValue(hoveringNodeState);
+  const setGoToSearch = useSetAtom(goToSearchState);
+  const setShowAiGraphCreatorInput = useSetAtom(showAiGraphCreatorInputState);
+
+  const nodes = useAtomValue(nodesState);
+  const [selectedNodeIds, setSelectedNodes] = useAtom(selectedNodesState);
+
+  const undo = useUndo();
+  const redo = useRedo();
 
   const latestHandler = useLatest((e: KeyboardEvent) => {
     // If we're in an input, don't do anything
@@ -98,6 +111,56 @@ export function useCanvasHotkeys() {
       if (hoveringNode) {
         setEditingNode(hoveringNode);
       }
+    }
+
+    if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      undo();
+    }
+
+    if (e.key === 'y' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      redo();
+    }
+
+    if (e.key === 'z' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      redo();
+    }
+
+    if (e.key === 'p' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      setGoToSearch({ searching: true, query: '', selectedIndex: 0, entries: [] });
+    }
+
+    if (e.key === 'a' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (
+        selectedNodeIds.length === nodes.length &&
+        selectedNodeIds.length > 0 &&
+        selectedNodeIds.every((id) => nodes.find((n) => n.id === id))
+      ) {
+        setSelectedNodes([]);
+      } else {
+        setSelectedNodes(nodes.map((n) => n.id));
+      }
+    }
+
+    if (e.key === 'i' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      setShowAiGraphCreatorInput(true);
     }
   });
 

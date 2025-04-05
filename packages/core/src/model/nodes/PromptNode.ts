@@ -22,7 +22,7 @@ import { mapValues } from 'lodash-es';
 import { dedent } from 'ts-dedent';
 import { coerceType, coerceTypeOptional } from '../../utils/coerceType.js';
 import { getInputOrData } from '../../utils/index.js';
-import { interpolate } from '../../utils/interpolation.js';
+import { interpolate, extractInterpolationVariables } from '../../utils/interpolation.js';
 import { match } from 'ts-pattern';
 
 export type PromptNode = ChartNode<'prompt', PromptNodeData>;
@@ -37,6 +37,9 @@ export type PromptNodeData = {
   useNameInput?: boolean;
   enableFunctionCall?: boolean;
   computeTokenCount?: boolean;
+
+  isCacheBreakpoint?: boolean;
+  useIsCacheBreakpointInput?: boolean;
 };
 
 export class PromptNodeImpl extends NodeImpl<PromptNode> {
@@ -88,15 +91,22 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
       });
     }
 
+    if (this.data.useIsCacheBreakpointInput) {
+      inputs.push({
+        id: 'isCacheBreakpoint' as PortId,
+        title: 'Is Cache Breakpoint',
+        dataType: 'boolean',
+      });
+    }
+
     // Extract inputs from promptText, everything like {{input}}
-    const inputNames = [...new Set(this.chartNode.data.promptText.match(/\{\{([^}]+)\}\}/g))];
+    const inputNames = extractInterpolationVariables(this.data.promptText);
     inputs = [
       ...inputs,
       ...(inputNames?.map((inputName): NodeInputDefinition => {
         return {
-          // id and title should not have the {{ and }}
-          id: inputName.slice(2, -2) as PortId,
-          title: inputName.slice(2, -2),
+          id: inputName as PortId,
+          title: inputName,
           dataType: 'string',
           required: false,
         };
@@ -128,6 +138,11 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
 
   getEditors(): EditorDefinition<PromptNode>[] {
     return [
+      {
+        type: 'custom',
+        customEditorId: 'PromptNodeAiAssist',
+        label: 'Generate Using AI',
+      },
       {
         type: 'dropdown',
         label: 'Type',
@@ -161,6 +176,14 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
         dataKey: 'computeTokenCount',
       },
       {
+        type: 'toggle',
+        label: 'Is Cache Breakpoint',
+        dataKey: 'isCacheBreakpoint',
+        helperMessage:
+          'For Anthropic, marks this message as a cache breakpoint - this message and every message before it will be cached using Prompt Caching.',
+        useInputToggleDataKey: 'useIsCacheBreakpointInput',
+      },
+      {
         type: 'code',
         label: 'Prompt Text',
         dataKey: 'promptText',
@@ -175,7 +198,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
       {
         type: 'markdown',
         text: dedent`
-          _${typeDisplay[this.data.type]}${this.data.name ? ` (${this.data.name})` : ''}_
+          _${typeDisplay[this.data.type]}${this.data.name ? ` (${this.data.name})` : ''}_ ${this.data.isCacheBreakpoint ? ' (Cache Breakpoint)' : ''}
       `,
       },
       {
@@ -208,6 +231,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
     const outputValue = interpolate(this.chartNode.data.promptText, inputMap);
 
     const type = getInputOrData(this.data, inputs, 'type', 'string');
+    const isCacheBreakpoint = getInputOrData(this.data, inputs, 'isCacheBreakpoint', 'boolean');
 
     if (['assistant', 'system', 'user', 'function'].includes(type) === false) {
       throw new Error(`Invalid type: ${type}`);
@@ -219,6 +243,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
         (type): ChatMessage => ({
           type,
           message: outputValue,
+          isCacheBreakpoint,
         }),
       )
       .with(
@@ -226,6 +251,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
         (type): ChatMessage => ({
           type,
           message: outputValue,
+          isCacheBreakpoint,
         }),
       )
       .with('assistant', (type): ChatMessage => {
@@ -248,6 +274,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
           message: outputValue,
           function_call: functionCall as AssistantChatMessageFunctionCall,
           function_calls: functionCall ? [functionCall as AssistantChatMessageFunctionCall] : undefined,
+          isCacheBreakpoint,
         };
       })
       .with(
@@ -256,6 +283,7 @@ export class PromptNodeImpl extends NodeImpl<PromptNode> {
           type,
           message: outputValue,
           name: getInputOrData(this.data, inputs, 'name', 'string'),
+          isCacheBreakpoint,
         }),
       )
       .otherwise(() => {

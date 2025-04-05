@@ -3,7 +3,17 @@ import { useNodeHeightCache } from '../hooks/useNodeBodyHeight';
 import { DraggableNode } from './DraggableNode.js';
 import { css } from '@emotion/react';
 import { nodeStyles } from './nodeStyles.js';
-import { type FC, useMemo, useRef, useState, type MouseEvent, useEffect, useLayoutEffect } from 'react';
+import {
+  type FC,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  useEffect,
+  useLayoutEffect,
+  type RefObject,
+  type MutableRefObject,
+} from 'react';
 import { ContextMenu, type ContextMenuContext } from './ContextMenu.js';
 import { CSSTransition } from 'react-transition-group';
 import { WireLayer } from './WireLayer.js';
@@ -19,7 +29,7 @@ import {
   type NodeInputDefinition,
   type NodeOutputDefinition,
 } from '@ironclad/rivet-core';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
   type CanvasPosition,
   canvasPositionState,
@@ -37,7 +47,7 @@ import { VisualNode } from './VisualNode.js';
 import { useStableCallback } from '../hooks/useStableCallback.js';
 import { useThrottle, useThrottleFn } from 'ahooks';
 import { produce } from 'immer';
-import { graphMetadataState } from '../state/graph.js';
+import { graphMetadataState, graphState, nodesState } from '../state/graph.js';
 import { useViewportBounds } from '../hooks/useViewportBounds.js';
 import { useGlobalHotkey } from '../hooks/useGlobalHotkey.js';
 import { useWireDragScrolling } from '../hooks/useWireDragScrolling';
@@ -51,7 +61,9 @@ import { MouseIcon } from './MouseIcon';
 import { PortInfo } from './PortInfo';
 import { useNodeTypes } from '../hooks/useNodeTypes';
 import { lastRunDataByNodeState, selectedProcessPageNodesState } from '../state/dataFlow';
-import { useRemoveNodes } from '../hooks/useRemoveNodes';
+import { useDeleteNodesCommand } from '../commands/deleteNodeCommand';
+import { useEditNodeCommand } from '../commands/editNodeCommand';
+import { useAutoLayoutGraph } from '../hooks/useAutoLayoutGraph';
 
 const styles = css`
   width: 100vw;
@@ -154,6 +166,7 @@ export interface NodeCanvasProps {
     context: ContextMenuContext,
     meta: { x: number; y: number },
   ) => void;
+  autoLayoutGraph: MutableRefObject<() => void>;
 }
 
 export type PortPositions = Record<string, { x: number; y: number }>;
@@ -168,17 +181,18 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
   onNodeSelected,
   onNodeStartEditing,
   onContextMenuItemSelected,
+  autoLayoutGraph,
 }) => {
-  const [canvasPosition, setCanvasPosition] = useRecoilState(canvasPositionState);
-  const selectedGraphMetadata = useRecoilValue(graphMetadataState);
+  const [canvasPosition, setCanvasPosition] = useAtom(canvasPositionState);
+  const selectedGraphMetadata = useAtomValue(graphMetadataState);
 
-  const setLastSavedCanvasPosition = useSetRecoilState(lastCanvasPositionByGraphState);
+  const setLastSavedCanvasPosition = useSetAtom(lastCanvasPositionByGraphState);
 
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, canvasStartX: 0, canvasStartY: 0 });
   const { clientToCanvasPosition } = useCanvasPositioning();
-  const setLastMousePosition = useSetRecoilState(lastMousePositionState);
-  const removeNodes = useRemoveNodes();
+  const setLastMousePosition = useSetAtom(lastMousePositionState);
+  const removeNodes = useDeleteNodesCommand();
 
   const { refs, floatingStyles } = useFloating({
     placement: 'bottom-end',
@@ -192,8 +206,8 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     target: undefined,
   });
 
-  const [editingNodeId, setEditingNodeId] = useRecoilState(editingNodeState);
-  const [selectedNodeIds, setSelectedNodeIds] = useRecoilState(selectedNodesState);
+  const [editingNodeId, setEditingNodeId] = useAtom(editingNodeState);
+  const [selectedNodeIds, setSelectedNodeIds] = useAtom(selectedNodesState);
   const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; width: number; height: number } | null>(
     null,
   );
@@ -203,6 +217,9 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
   useWireDragScrolling();
 
   const cache = useNodeHeightCache();
+
+  const graph = useAtomValue(graphState);
+  const setNodes = useSetAtom(nodesState);
 
   const {
     contextMenuRef,
@@ -220,6 +237,16 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     canvasRef,
     recalculate: recalculatePortPositions,
   } = useNodePortPositions({ enabled: shouldRenderWires, isDraggingNode: draggingNodes.length > 0 });
+
+  const autoLayout = useAutoLayoutGraph();
+
+  useEffect(() => {
+    autoLayoutGraph.current = () => {
+      const nodes = autoLayout(graph);
+      setNodes(nodes);
+      recalculatePortPositions();
+    };
+  }, [autoLayout, autoLayoutGraph, recalculatePortPositions, setNodes, graph]);
 
   useEffect(() => {
     recalculatePortPositions();
@@ -360,7 +387,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     return false;
   };
 
-  const zoomSensitivity = useRecoilValue(zoomSensitivityState);
+  const zoomSensitivity = useAtomValue(zoomSensitivityState);
 
   // I think safari deals with wheel events differently, so we need to throttle the zooming
   // because otherwise it lags like CRAZY
@@ -440,7 +467,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     );
   });
 
-  const [hoveringNode, setHoveringNode] = useRecoilState(hoveringNodeState);
+  const [hoveringNode, setHoveringNode] = useAtom(hoveringNodeState);
   const [hoveringPort, setHoveringPort] = useState<
     | {
         nodeId: NodeId;
@@ -453,7 +480,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
   const hoveringPortTimeout = useRef<number | undefined>();
   const [hoveringShowPortInfo, setHoveringPortShowInfo] = useState(false);
 
-  const closestPort = useRecoilValue(draggingWireClosestPortState);
+  const closestPort = useAtomValue(draggingWireClosestPortState);
 
   const { setReference } = refs;
 
@@ -553,7 +580,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
       e.preventDefault();
 
       if (selectedNodeIds.length > 0) {
-        removeNodes(...selectedNodeIds);
+        removeNodes({ nodeIds: selectedNodeIds });
         setSelectedNodeIds([]);
       }
     },
@@ -565,6 +592,8 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     handleContextMenu(e);
   });
 
+  const lastRunPerNode = useAtomValue(lastRunDataByNodeState);
+
   const hydratedContextMenuData = useMemo((): ContextMenuContext | null => {
     if (contextMenuData.data?.type.startsWith('node-')) {
       const nodeType = contextMenuData.data.type.replace('node-', '');
@@ -574,6 +603,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
         data: {
           nodeType,
           nodeId,
+          canRunFromHere: lastRunPerNode[nodeId] != null,
         },
       };
     }
@@ -582,7 +612,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
       type: 'blankArea',
       data: {},
     };
-  }, [contextMenuData]);
+  }, [contextMenuData, lastRunPerNode]);
 
   // Idk, before we were able to unmount the context menu, but safari be weird,
   // so we move it off screen instead
@@ -591,13 +621,12 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
   useCanvasHotkeys();
   useSearchGraph();
 
-  const searchMatchingNodes = useRecoilValue(searchMatchingNodeIdsState);
+  const searchMatchingNodes = useAtomValue(searchMatchingNodeIdsState);
 
-  const pinnedNodes = useRecoilValue(pinnedNodesState);
+  const pinnedNodes = useAtomValue(pinnedNodesState);
 
   const nodeTypes = useNodeTypes();
-  const lastRunPerNode = useRecoilValue(lastRunDataByNodeState);
-  const selectedProcessPagePerNode = useRecoilValue(selectedProcessPageNodesState);
+  const selectedProcessPagePerNode = useAtomValue(selectedProcessPageNodesState);
 
   const isZoomedOut = canvasPosition.zoom < 0.4;
   const isReallyZoomedOut = canvasPosition.zoom < 0.2;
@@ -658,6 +687,20 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
     forceRender,
     debounceTime,
   ]);
+
+  const editNode = useEditNodeCommand();
+
+  const onResizeFinish = useStableCallback((node: ChartNode, width: number, height: number) => {
+    editNode({
+      nodeId: node.id,
+      newNode: {
+        visualData: {
+          ...node.visualData,
+          width,
+        },
+      },
+    });
+  });
 
   return (
     <DndContext onDragStart={onNodeStartDrag} onDragEnd={onNodeDragged}>
@@ -720,6 +763,7 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
                   onMouseOut={onNodeMouseOut}
                   onPortMouseOver={onPortMouseOver}
                   onPortMouseOut={onPortMouseOut}
+                  onResizeFinish={onResizeFinish}
                 />
               );
             })}
@@ -811,9 +855,9 @@ export const NodeCanvas: FC<NodeCanvasProps> = ({
 };
 
 const DebugOverlay: FC<{ enabled: boolean }> = ({ enabled }) => {
-  const canvasPosition = useRecoilValue(canvasPositionState);
+  const canvasPosition = useAtomValue(canvasPositionState);
 
-  const lastMousePosition = useRecoilValue(lastMousePositionState);
+  const lastMousePosition = useAtomValue(lastMousePositionState);
 
   const { clientToCanvasPosition } = useCanvasPositioning();
 

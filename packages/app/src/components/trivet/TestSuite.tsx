@@ -1,7 +1,7 @@
 import { type FC, useCallback, useMemo } from 'react';
 import { TestCaseTable } from './TestCaseTable';
 import { InlineEditableTextfield } from '@atlaskit/inline-edit';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useAtom, useAtomValue } from 'jotai';
 import { savedGraphsState } from '../../state/savedGraphs';
 import { keyBy } from 'lodash-es';
 import { type GraphId, type NodeGraph } from '@ironclad/rivet-core';
@@ -22,6 +22,7 @@ import AlertCircleIcon from 'majesticons/line/alert-circle-line.svg?react';
 import { NoTestCasesSplash } from './NoTestCasesSplash';
 import { useTestSuite } from '../../hooks/useTestSuite';
 import { GraphSelector } from '../editors/GraphSelectorEditor';
+import { swallowPromise, syncWrapper } from '../../utils/syncWrapper';
 
 const styles = css`
   min-height: 100%;
@@ -123,7 +124,7 @@ const styles = css`
 `;
 
 export const TestSuiteRenderer: FC<{ tryRunTests: TryRunTests }> = ({ tryRunTests }) => {
-  const { testSuites, selectedTestSuiteId } = useRecoilValue(trivetState);
+  const { testSuites, selectedTestSuiteId } = useAtomValue(trivetState);
 
   const testSuite = useMemo(
     () => testSuites.find((ts) => ts.id === selectedTestSuiteId),
@@ -147,9 +148,8 @@ export const TestSuiteRenderer: FC<{ tryRunTests: TryRunTests }> = ({ tryRunTest
 };
 
 export const TestSuite: FC<{ testSuite: TrivetTestSuite; tryRunTests: TryRunTests }> = ({ testSuite, tryRunTests }) => {
-  const [{ selectedTestSuiteId, editingTestCaseId, recentTestResults, runningTests }, setState] =
-    useRecoilState(trivetState);
-  const savedGraphs = useRecoilValue(savedGraphsState);
+  const [{ selectedTestSuiteId, editingTestCaseId, recentTestResults, runningTests }, setState] = useAtom(trivetState);
+  const savedGraphs = useAtomValue(savedGraphsState);
 
   const { addTestCase, updateTestSuite, testGraph, setEditingTestCase, deleteTestCase, duplicateTestCase } =
     useTestSuite(testSuite.id);
@@ -301,7 +301,10 @@ export const TestSuite: FC<{ testSuite: TrivetTestSuite; tryRunTests: TryRunTest
           ) : (
             <>
               <div className="test-suite-controls">
-                <Button appearance="primary" onClick={() => tryRunTests({ testSuiteIds: [testSuite.id] })}>
+                <Button
+                  appearance="primary"
+                  onClick={() => swallowPromise(tryRunTests({ testSuiteIds: [testSuite.id] }))}
+                >
                   Run Test Suite
                 </Button>
               </div>
@@ -326,7 +329,7 @@ export const TestSuite: FC<{ testSuite: TrivetTestSuite; tryRunTests: TryRunTest
         </div>
       )}
       <div className="view-documentation">
-        <a onClick={viewDocumentation}>
+        <a onClick={syncWrapper(viewDocumentation)}>
           {/* TODO wrong icon, want external url icon */}
           <BrowserLineIcon /> Trivet Documentation
         </a>

@@ -12,7 +12,8 @@ import { type Inputs, type Outputs } from '../GraphProcessor.js';
 import { type NodeBodySpec } from '../../index.js';
 import { type InternalProcessContext } from '../ProcessContext.js';
 import { dedent } from 'ts-dedent';
-import { expectType } from '../../utils/expectType.js';
+import { createTreeFromPaths } from '../../utils/paths.js';
+import { getInputOrData } from '../../utils/inputs.js';
 
 export type ReadDirectoryNode = ChartNode<'readDirectory', ReadDirectoryNodeData>;
 
@@ -34,6 +35,13 @@ type ReadDirectoryNodeData = {
 
   ignores?: string[];
   useIgnoresInput: boolean;
+};
+
+type TreeNode = {
+  path: string;
+  name: string;
+  isDirectory: boolean;
+  children: TreeNode[];
 };
 
 export class ReadDirectoryNodeImpl extends NodeImpl<ReadDirectoryNode> {
@@ -128,6 +136,11 @@ export class ReadDirectoryNodeImpl extends NodeImpl<ReadDirectoryNode> {
         title: 'Paths',
         dataType: 'string[]',
       },
+      {
+        id: 'tree' as PortId,
+        title: 'Tree',
+        dataType: 'object',
+      },
     ];
   }
 
@@ -150,7 +163,10 @@ export class ReadDirectoryNodeImpl extends NodeImpl<ReadDirectoryNode> {
   static getUIData(): NodeUIData {
     return {
       infoBoxBody: dedent`
-        Reads the contents of the specified directory and outputs an array of filenames.
+        Reads the contents of the specified directory and outputs:
+        1. An array of filenames
+        2. The root path of the search
+        3. A tree structure representing the directory hierarchy
       `,
       infoBoxTitle: 'Read Directory Node',
       contextMenuTitle: 'Read Directory',
@@ -158,36 +174,19 @@ export class ReadDirectoryNodeImpl extends NodeImpl<ReadDirectoryNode> {
     };
   }
 
-  async process(inputData: Inputs, context: InternalProcessContext): Promise<Outputs> {
+  async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
     const { nativeApi } = context;
 
     if (nativeApi == null) {
       throw new Error('This node requires a native API to run.');
     }
 
-    const path = this.chartNode.data.usePathInput
-      ? expectType(inputData['path' as PortId], 'string')
-      : this.chartNode.data.path;
-
-    const recursive = this.chartNode.data.useRecursiveInput
-      ? expectType(inputData['recursive' as PortId], 'boolean')
-      : this.chartNode.data.recursive;
-
-    const includeDirectories = this.chartNode.data.useIncludeDirectoriesInput
-      ? expectType(inputData['includeDirectories' as PortId], 'boolean')
-      : this.chartNode.data.includeDirectories;
-
-    const filterGlobs = this.chartNode.data.useFilterGlobsInput
-      ? expectType(inputData['filterGlobs' as PortId], 'string[]')
-      : this.chartNode.data.filterGlobs;
-
-    const relative = this.chartNode.data.useRelativeInput
-      ? expectType(inputData['relative' as PortId], 'boolean')
-      : this.chartNode.data.relative;
-
-    const ignores = this.chartNode.data.useIgnoresInput
-      ? expectType(inputData['ignores' as PortId], 'string[]')
-      : this.chartNode.data.ignores;
+    const path = getInputOrData(this.data, inputs, 'path');
+    const recursive = getInputOrData(this.data, inputs, 'recursive', 'boolean');
+    const includeDirectories = getInputOrData(this.data, inputs, 'includeDirectories', 'boolean');
+    const filterGlobs = getInputOrData(this.data, inputs, 'filterGlobs', 'string[]');
+    const relative = getInputOrData(this.data, inputs, 'relative', 'boolean');
+    const ignores = getInputOrData(this.data, inputs, 'ignores', 'string[]');
 
     try {
       const files = await nativeApi.readdir(path, undefined, {
@@ -198,19 +197,27 @@ export class ReadDirectoryNodeImpl extends NodeImpl<ReadDirectoryNode> {
         ignores,
       });
 
-      const outputs: Outputs = {
+      const tree = createTreeFromPaths(files, path);
+
+      return {
         ['paths' as PortId]: { type: 'string[]', value: files },
         ['rootPath' as PortId]: { type: 'string', value: path },
+        ['tree' as PortId]: { type: 'object', value: tree as unknown as Record<string, unknown> },
       };
-
-      return outputs;
     } catch (err) {
-      const outputs: Outputs = {
+      return {
         ['paths' as PortId]: { type: 'string[]', value: ['(no such path)'] },
         ['rootPath' as PortId]: { type: 'string', value: path },
+        ['tree' as PortId]: {
+          type: 'object',
+          value: {
+            path,
+            name: path.split('/').pop() || path,
+            isDirectory: true,
+            children: [],
+          },
+        },
       };
-
-      return outputs;
     }
   }
 }

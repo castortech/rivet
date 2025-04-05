@@ -1,4 +1,4 @@
-import { useRecoilState } from 'recoil';
+import { useAtom } from 'jotai';
 import { trivetState } from '../../state/trivet';
 import { type FC, useCallback, useMemo } from 'react';
 import { css } from '@emotion/react';
@@ -9,6 +9,7 @@ import { nanoid } from 'nanoid/non-secure';
 import { type TryRunTests } from './api';
 import { overlayOpenState } from '../../state/ui';
 import { NoTestSuitesSplash } from './NoTestSuitesSplash';
+import { swallowPromise } from '../../utils/syncWrapper';
 
 const styles = css`
   position: fixed;
@@ -44,7 +45,7 @@ const styles = css`
 `;
 
 export const TrivetRenderer: FC<{ tryRunTests: TryRunTests }> = ({ tryRunTests }) => {
-  const [openOverlay, setOpenOverlay] = useRecoilState(overlayOpenState);
+  const [openOverlay, setOpenOverlay] = useAtom(overlayOpenState);
 
   if (openOverlay !== 'trivet') return null;
 
@@ -57,7 +58,7 @@ export type TrivetContainerProps = {
 };
 
 export const TrivetContainer: FC<TrivetContainerProps> = ({ tryRunTests, onClose }) => {
-  const [{ testSuites, selectedTestSuiteId, runningTests, recentTestResults }, setState] = useRecoilState(trivetState);
+  const [{ testSuites, selectedTestSuiteId, runningTests, recentTestResults }, setState] = useAtom(trivetState);
   const selectedTestSuite = useMemo(
     () => testSuites.find((ts) => ts.id === selectedTestSuiteId),
     [testSuites, selectedTestSuiteId],

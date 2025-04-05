@@ -7,11 +7,12 @@ import PlayIcon from 'majesticons/line/play-circle-line.svg?react';
 import CopyIcon from '../assets/icons/copy-icon.svg?react';
 import PasteIcon from '../assets/icons/paste-icon.svg?react';
 import PlusIcon from 'majesticons/line/plus-line.svg?react';
+import LayoutColumnsIcon from '../assets/icons/layout-card-list-icon.svg?react';
 import { type NodeId } from '@ironclad/rivet-core';
-import { useRecoilValue } from 'recoil';
 import { selectedNodesState } from '../state/graphBuilder.js';
 import { useContextMenuCommands } from './useContextMenuCommands.js';
 import { clipboardState } from '../state/clipboard';
+import { useAtomValue } from 'jotai';
 
 export type ContextMenuConfig = {
   contexts: ContextMenuContextConfig;
@@ -40,6 +41,7 @@ export type ContextMenuItem<Context = unknown, Data = unknown> = {
     description: string;
     image?: string;
   };
+  hiddenUntilSearched?: boolean;
 };
 
 export type ContextMenuConfiguration = ReturnType<typeof useContextMenuConfiguration>;
@@ -49,8 +51,8 @@ const type = <T>() => undefined! as T;
 export function useContextMenuConfiguration() {
   const addMenuConfig = useContextMenuAddNodeConfiguration();
   const commands = useContextMenuCommands();
-  const selectedNodeIds = useRecoilValue(selectedNodesState);
-  const clipboard = useRecoilValue(clipboardState);
+  const selectedNodeIds = useAtomValue(selectedNodesState);
+  const clipboard = useAtomValue(clipboardState);
 
   const config = useMemo(
     () =>
@@ -61,6 +63,7 @@ export function useContextMenuConfiguration() {
             contextType: type<{
               nodeType: string;
               nodeId: NodeId;
+              canRunFromHere: boolean;
             }>(),
             items: [
               {
@@ -95,8 +98,17 @@ export function useContextMenuConfiguration() {
               },
               {
                 id: 'node-run-to-here',
-                label: 'Run to Here',
+                label: 'Run to here',
                 icon: PlayIcon,
+              },
+              {
+                id: 'node-run-from-here',
+                label: 'Run from here',
+                icon: PlayIcon,
+                conditional: (context) => {
+                  const { canRunFromHere } = context as { canRunFromHere: boolean };
+                  return canRunFromHere;
+                },
               },
               {
                 id: 'node-delete',
@@ -119,6 +131,12 @@ export function useContextMenuConfiguration() {
                 label: 'Paste',
                 icon: PasteIcon,
                 conditional: () => clipboard !== undefined,
+              },
+              {
+                id: 'auto-layout',
+                label: 'Auto Layout',
+                icon: LayoutColumnsIcon,
+                hiddenUntilSearched: true,
               },
             ],
           },

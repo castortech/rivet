@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react';
-import { atom, useRecoilState, useRecoilValue } from 'recoil';
+import { atom, useAtom, useAtomValue } from 'jotai';
 import {
   checkForUpdatesState,
   defaultExecutorState,
@@ -32,13 +32,11 @@ import Range from '@atlaskit/range';
 import { DEFAULT_CHAT_NODE_TIMEOUT } from '../../../core/src/utils/defaults';
 import useAsyncEffect from 'use-async-effect';
 import { getVersion } from '@tauri-apps/api/app';
+import { swallowPromise } from '../utils/syncWrapper';
 
 interface SettingsModalProps {}
 
-export const settingsModalOpenState = atom({
-  key: 'settingsModalOpen',
-  default: false,
-});
+export const settingsModalOpenState = atom(false);
 
 const modalBody = css`
   min-height: 300px;
@@ -54,7 +52,9 @@ const modalBody = css`
   }
 `;
 
-type Pages = 'general' | 'openai' | 'plugins' | 'updates';
+type DefaultPages = 'general' | 'openai' | 'plugins' | 'updates';
+
+type Pages = DefaultPages | string;
 
 const buttonsContainer = css`
   > button span {
@@ -64,10 +64,41 @@ const buttonsContainer = css`
 `;
 
 export const SettingsModal: FC<SettingsModalProps> = () => {
-  const [isOpen, setIsOpen] = useRecoilState(settingsModalOpenState);
+  const [isOpen, setIsOpen] = useAtom(settingsModalOpenState);
   const [page, setPage] = useState<Pages>('general');
 
   const closeModal = () => setIsOpen(false);
+
+  const plugins = useDependsOnPlugins();
+
+  const pluginsWithCustomPages = plugins.filter((plugin) => {
+    const configPage = plugin.configPage;
+
+    return configPage !== undefined;
+  });
+
+  const customPluginsPages = Object.fromEntries(
+    pluginsWithCustomPages.map((plugin) => {
+      return [plugin.id, <CustomPluginsSettingsPage key={plugin.id} pluginId={plugin.id} />];
+    }),
+  );
+
+  const CustomPluginsTabs = (props: { page: string }) => {
+    const { page } = props;
+
+    return (
+      <div>
+        {pluginsWithCustomPages.map((plugin) => {
+          const configPage = pluginsWithCustomPages.find((p) => p.id === plugin.id)!.configPage!;
+          return (
+            <ButtonItem key={plugin.id} isSelected={page === plugin.id} onClick={() => setPage(plugin.id)}>
+              {configPage.label}
+            </ButtonItem>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <ModalTransition>
@@ -97,6 +128,7 @@ export const SettingsModal: FC<SettingsModalProps> = () => {
                       <ButtonItem isSelected={page === 'updates'} onClick={() => setPage('updates')}>
                         Updates
                       </ButtonItem>
+                      <CustomPluginsTabs page={page} />
                     </div>
                   </NavigationContent>
                 </SideNavigation>
@@ -107,6 +139,7 @@ export const SettingsModal: FC<SettingsModalProps> = () => {
                   .with('openai', () => <OpenAiSettingsPage />)
                   .with('plugins', () => <PluginsSettingsPage />)
                   .with('updates', () => <UpdatesSettingsPage />)
+                  .with(P.string, (id) => customPluginsPages[id])
                   .exhaustive()}
               </main>
             </div>
@@ -118,13 +151,13 @@ export const SettingsModal: FC<SettingsModalProps> = () => {
 };
 
 export const GeneralSettingsPage: FC = () => {
-  const [settings, setSettings] = useRecoilState(settingsState);
-  const [theme, setTheme] = useRecoilState(themeState);
-  const [recordExecutions, setRecordExecutions] = useRecoilState(recordExecutionsState);
-  const [defaultExecutor, setDefaultExecutor] = useRecoilState(defaultExecutorState);
-  const [previousDataPerNodeToKeep, setPreviousDataPerNodeToKeep] = useRecoilState(previousDataPerNodeToKeepState);
-  const [zoomSensitivity, setZoomSensitivity] = useRecoilState(zoomSensitivityState);
-  const [preservePortTextCase, setPreservePortTextCase] = useRecoilState(preservePortTextCaseState);
+  const [settings, setSettings] = useAtom(settingsState);
+  const [theme, setTheme] = useAtom(themeState);
+  const [recordExecutions, setRecordExecutions] = useAtom(recordExecutionsState);
+  const [defaultExecutor, setDefaultExecutor] = useAtom(defaultExecutorState);
+  const [previousDataPerNodeToKeep, setPreviousDataPerNodeToKeep] = useAtom(previousDataPerNodeToKeepState);
+  const [zoomSensitivity, setZoomSensitivity] = useAtom(zoomSensitivityState);
+  const [preservePortTextCase, setPreservePortTextCase] = useAtom(preservePortTextCaseState);
 
   return (
     <div css={fields}>
@@ -263,6 +296,33 @@ export const GeneralSettingsPage: FC = () => {
           </>
         )}
       </Field>
+      <Field name="throttleChatNode">
+        {() => (
+          <>
+            <Label htmlFor="throttleChatNode" testId="throttleChatNode">
+              Chat node throttle milliseconds
+            </Label>
+            <div className="toggle-field">
+              <TextField
+                type="number"
+                value={settings.throttleChatNode ?? 100}
+                onChange={(e) => {
+                  if ((e.target as HTMLInputElement).valueAsNumber >= 0) {
+                    setSettings((s) => ({
+                      ...s,
+                      throttleChatNode: (e.target as HTMLInputElement).valueAsNumber,
+                    }));
+                  }
+                }}
+              />
+            </div>
+            <HelperMessage>
+              Throttles the stream of chat node data into Rivet. Increasing this can improve performance. Set to 0 to
+              disable.
+            </HelperMessage>
+          </>
+        )}
+      </Field>
     </div>
   );
 };
@@ -280,7 +340,7 @@ const fields = css`
 `;
 
 export const OpenAiSettingsPage: FC = () => {
-  const [settings, setSettings] = useRecoilState(settingsState);
+  const [settings, setSettings] = useAtom(settingsState);
 
   const chatNodeHeadersPairs = entries(settings.chatNodeHeaders ?? {}).map(([key, value]) => ({
     key,
@@ -341,7 +401,12 @@ export const OpenAiSettingsPage: FC = () => {
           <>
             <TextField
               value={settings.openAiOrganization}
-              onChange={(e) => setSettings((s) => ({ ...s, openAiOrganization: (e.target as HTMLInputElement).value }))}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  openAiOrganization: (e.target as HTMLInputElement).value,
+                }))
+              }
             />
             <HelperMessage>
               You may also set the OPENAI_ORG_ID environment variable. This is only required if you are a member of a
@@ -433,7 +498,7 @@ export const OpenAiSettingsPage: FC = () => {
 
 export const PluginsSettingsPage: FC = () => {
   const plugins = useDependsOnPlugins();
-  const [settings, setSettings] = useRecoilState(settingsState);
+  const [settings, setSettings] = useAtom(settingsState);
 
   if (plugins.length === 0) {
     return (
@@ -448,6 +513,11 @@ export const PluginsSettingsPage: FC = () => {
     <div css={fields}>
       {plugins.map((plugin) => {
         const configOptions = entries(plugin.configSpec ?? {});
+        const configPage = plugin.configPage;
+
+        if (configPage) {
+          return null;
+        }
 
         return (
           <section key={plugin.id}>
@@ -492,9 +562,67 @@ export const PluginsSettingsPage: FC = () => {
   );
 };
 
+export const CustomPluginsSettingsPage: FC<{ pluginId: string }> = ({ pluginId }) => {
+  const plugins = useDependsOnPlugins();
+  const [settings, setSettings] = useAtom(settingsState);
+
+  const plugin = plugins.find((p) => p.id === pluginId);
+  if (!plugin) {
+    return <div>Plugin not found</div>;
+  }
+
+  const configOptions = entries(plugin.configSpec ?? {});
+
+  const configPage = plugin.configPage;
+  if (!configPage) {
+    return <>Config page not found</>;
+  }
+
+  return (
+    <div css={fields}>
+      <section key={plugin.id}>
+        <Header>{configPage.label ?? plugin.id}</Header>
+        {configOptions.map(([key, config]) => (
+          <Field key={key} name={`plugin-${plugin.id}-${key}`} label={`${config.label} (${plugin.id})`}>
+            {() =>
+              match(config)
+                .with(
+                  { type: 'string' },
+                  { type: 'secret' },
+                  (config: StringPluginConfigurationSpec | SecretPluginConfigurationSpec) => (
+                    <>
+                      <TextField
+                        value={(settings.pluginSettings?.[plugin.id]?.[key] as string | undefined) ?? ''}
+                        type={config.type === 'secret' ? 'password' : 'text'}
+                        onChange={(e) =>
+                          setSettings((s) => ({
+                            ...s,
+                            pluginSettings: {
+                              ...s.pluginSettings,
+                              [plugin.id]: {
+                                ...s.pluginSettings?.[plugin.id],
+                                [key]: (e.target as HTMLInputElement).value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                      {config.helperText && <HelperMessage>{config.helperText}</HelperMessage>}
+                    </>
+                  ),
+                )
+                .otherwise(() => null)
+            }
+          </Field>
+        ))}
+      </section>
+    </div>
+  );
+};
+
 export const UpdatesSettingsPage: FC = () => {
   const checkForUpdatesNow = useCheckForUpdate({ notifyNoUpdates: true, force: true });
-  const [checkForUpdates, setCheckForUpdates] = useRecoilState(checkForUpdatesState);
+  const [checkForUpdates, setCheckForUpdates] = useAtom(checkForUpdatesState);
 
   const [currentVersion, setCurrentVersion] = useState('');
 
@@ -502,7 +630,7 @@ export const UpdatesSettingsPage: FC = () => {
     setCurrentVersion(await getVersion());
   }, []);
 
-  const skippedMaxVersion = useRecoilValue(skippedMaxVersionState);
+  const skippedMaxVersion = useAtomValue(skippedMaxVersionState);
 
   return (
     <div css={fields}>
@@ -531,7 +659,7 @@ export const UpdatesSettingsPage: FC = () => {
       <Field name="check-for-updates-now">
         {() => (
           <>
-            <Button appearance="primary" onClick={() => checkForUpdatesNow()}>
+            <Button appearance="primary" onClick={() => swallowPromise(checkForUpdatesNow())}>
               Check for updates now
             </Button>
           </>

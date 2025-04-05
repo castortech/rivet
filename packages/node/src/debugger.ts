@@ -10,6 +10,7 @@ import {
   type StringArrayDataValue,
   type DataId,
   type DataValue,
+  type Outputs,
 } from '@ironclad/rivet-core';
 import { match } from 'ts-pattern';
 import Emittery from 'emittery';
@@ -41,7 +42,9 @@ export type DynamicGraphRunOptions = {
   graphId: GraphId;
   inputs?: GraphInputs;
   runToNodeIds?: NodeId[];
+  runFromNodeId?: NodeId;
   contextValues: Record<string, DataValue>;
+  projectPath: string | undefined;
 };
 
 export type DynamicGraphRun = (data: DynamicGraphRunOptions) => Promise<void>;
@@ -79,7 +82,7 @@ export function startDebuggerServer(
       };
     }
 
-    socket.on('message', async (data) => {
+    const handleMessage = async (data: WebSocket.RawData) => {
       try {
         const stringData = data.toString();
 
@@ -97,14 +100,24 @@ export function startDebuggerServer(
 
         await match(message)
           .with({ type: 'run' }, async () => {
-            const { graphId, inputs, runToNodeIds, contextValues } = message.data as {
+            const { graphId, inputs, runToNodeIds, contextValues, runFromNodeId, projectPath } = message.data as {
               graphId: GraphId;
               inputs: GraphInputs;
               runToNodeIds?: NodeId[];
+              runFromNodeId?: NodeId;
               contextValues: Record<string, DataValue>;
+              projectPath: string | undefined;
             };
 
-            await options.dynamicGraphRun?.({ client: socket, graphId, inputs, runToNodeIds, contextValues });
+            await options.dynamicGraphRun?.({
+              client: socket,
+              graphId,
+              inputs,
+              runToNodeIds,
+              contextValues,
+              runFromNodeId,
+              projectPath,
+            });
           })
           .with({ type: 'set-dynamic-data' }, async () => {
             if (options.allowGraphUpload) {
@@ -138,6 +151,13 @@ export function startDebuggerServer(
                   const { nodeId, answers } = message.data as { nodeId: NodeId; answers: StringArrayDataValue };
                   processor.userInput(nodeId, answers);
                 })
+                .with({ type: 'preload' }, async () => {
+                  const data = (message.data as { nodeData: Record<NodeId, Outputs> }).nodeData;
+
+                  for (const [nodeId, outputs] of Object.entries(data)) {
+                    processor.preloadNodeData(nodeId as NodeId, outputs);
+                  }
+                })
                 .otherwise(async () => {
                   throw new Error(`Unknown message type: ${message.type}`);
                 });
@@ -150,6 +170,10 @@ export function startDebuggerServer(
           // noop, just prevent unhandled rejection
         }
       }
+    };
+
+    socket.on('message', (data) => {
+      void handleMessage(data);
     });
 
     if (options.allowGraphUpload) {

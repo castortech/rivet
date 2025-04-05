@@ -1,7 +1,7 @@
 import { useState, type FC } from 'react';
 
 import Modal, { ModalTransition, ModalBody, ModalFooter, ModalHeader, ModalTitle } from '@atlaskit/modal-dialog';
-import { useRecoilState, useSetRecoilState } from 'recoil';
+import { useAtom, useSetAtom } from 'jotai';
 import { skippedMaxVersionState, updateModalOpenState, updateStatusState } from '../state/settings';
 import Button from '@atlaskit/button';
 import useAsyncEffect from 'use-async-effect';
@@ -10,6 +10,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { css } from '@emotion/react';
 import { useMarkdown } from '../hooks/useMarkdown';
 import { relaunch } from '@tauri-apps/api/process';
+import { syncWrapper } from '../utils/syncWrapper';
 
 const bodyStyle = css`
   pre {
@@ -18,16 +19,16 @@ const bodyStyle = css`
 `;
 
 export const UpdateModalRenderer: FC = () => {
-  const [modalOpen] = useRecoilState(updateModalOpenState);
+  const [modalOpen] = useAtom(updateModalOpenState);
 
   return <ModalTransition>{modalOpen && <UpdateModal />}</ModalTransition>;
 };
 
 export const UpdateModal: FC = () => {
-  const setModalOpen = useSetRecoilState(updateModalOpenState);
+  const setModalOpen = useSetAtom(updateModalOpenState);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateStatus, setUpdateStatus] = useRecoilState(updateStatusState);
-  const setSkippedMaxVersion = useSetRecoilState(skippedMaxVersionState);
+  const [updateStatus, setUpdateStatus] = useAtom(updateStatusState);
+  const setSkippedMaxVersion = useSetAtom(skippedMaxVersionState);
 
   const [currentVersion, setCurrentVersion] = useState('');
   const [latestVersion, setLatestVersion] = useState('');
@@ -88,7 +89,7 @@ export const UpdateModal: FC = () => {
         <ModalFooter>
           {isUpdating ? (
             updateStatus === 'Installed.' ? (
-              <Button appearance="primary" onClick={relaunch}>
+              <Button appearance="primary" onClick={syncWrapper(relaunch)}>
                 Update complete! Click to restart.
               </Button>
             ) : (
@@ -96,7 +97,7 @@ export const UpdateModal: FC = () => {
             )
           ) : (
             <>
-              <Button appearance="primary" onClick={doUpdate}>
+              <Button appearance="primary" onClick={syncWrapper(doUpdate)}>
                 Update
               </Button>
               <Button appearance="subtle" onClick={skipUpdate}>

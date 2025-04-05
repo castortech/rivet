@@ -10,7 +10,7 @@ import {
   useState,
   useMemo,
 } from 'react';
-import { useRecoilValue, useSetRecoilState } from 'recoil';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { match } from 'ts-pattern';
 import {
   type NodeInputDefinition,
@@ -20,9 +20,10 @@ import {
   type NodeId,
   type PortId,
   type NodeOutputDefinition,
+  IF_PORT,
 } from '@ironclad/rivet-core';
 import type { HeightCache } from '../hooks/useNodeBodyHeight';
-import { type ProcessDataForNode, lastRunData, selectedProcessPage } from '../state/dataFlow.js';
+import { type ProcessDataForNode } from '../state/dataFlow.js';
 import { NodeBody } from './NodeBody.js';
 import { NodeOutput } from './NodeOutput.js';
 import SettingsCogIcon from 'majesticons/line/settings-cog-line.svg?react';
@@ -48,6 +49,8 @@ import {
 } from '../state/graphBuilder';
 import { Tooltip } from './Tooltip';
 import { useHistoricalNodeChangeInfo } from '../hooks/useHistoricalNodeChangeInfo';
+import { Port } from './Port';
+import { preservePortTextCaseState } from '../state/settings';
 
 export type VisualNodeProps = {
   heightCache: HeightCache;
@@ -92,6 +95,7 @@ export type VisualNodeProps = {
     portId: PortId,
     definition: NodeInputDefinition | NodeOutputDefinition,
   ) => void;
+  onResizeFinish?: (node: ChartNode, startWidth: number, startHeight: number) => void;
 
   nodeAttributes?: HTMLAttributes<HTMLDivElement>;
   handleAttributes?: HTMLAttributes<HTMLDivElement>;
@@ -127,6 +131,7 @@ export const VisualNode = memo(
         onMouseOut,
         onPortMouseOver,
         onPortMouseOut,
+        onResizeFinish,
       },
       ref,
     ) => {
@@ -134,6 +139,8 @@ export const VisualNode = memo(
       useDependsOnPlugins();
 
       const changeInfo = useHistoricalNodeChangeInfo(node.id);
+
+      const [isHovered, setIsHovered] = useState(false);
 
       const asCommentNode = node as CommentNode;
       const style = useMemo(() => {
@@ -201,6 +208,16 @@ export const VisualNode = memo(
 
       const isHistoricalChanged = changeInfo != null && changeInfo.changed && !!changeInfo.before && !!changeInfo.after;
 
+      const handleMouseOver = (event: MouseEvent<HTMLElement>) => {
+        onMouseOver?.(event, node.id);
+        setIsHovered(true);
+      };
+
+      const handleMouseOut = (event: MouseEvent<HTMLElement>) => {
+        onMouseOut?.(event, node.id);
+        setIsHovered(false);
+      };
+
       return (
         <div
           className={clsx(
@@ -216,6 +233,7 @@ export const VisualNode = memo(
               isComment,
               isPinned,
               disabled: node.disabled,
+              conditional: !!node.isConditional,
             },
             changedClass,
           )}
@@ -224,8 +242,8 @@ export const VisualNode = memo(
           {...nodeAttributes}
           data-nodeid={node.id}
           data-contextmenutype={`node-${node.type}`}
-          onMouseOver={(event) => onMouseOver?.(event, node.id)}
-          onMouseOut={(event) => onMouseOut?.(event, node.id)}
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
           onDoubleClick={() => {
             if (isKnownNodeType) {
               onStartEditing?.();
@@ -264,6 +282,8 @@ export const VisualNode = memo(
               processPage={processPage}
               isPinned={isPinned}
               isHistoricalChanged={isHistoricalChanged}
+              onResizeFinish={onResizeFinish}
+              isHovered={isHovered}
             />
           )}
         </div>
@@ -282,7 +302,12 @@ const ZoomedOutVisualNodeContent: FC<{
   isReallyZoomedOut: boolean;
   onSelectNode?: (multi: boolean) => void;
   onStartEditing?: () => void;
-  onWireStartDrag?: (event: MouseEvent<HTMLElement>, startNodeId: NodeId, startPortId: PortId) => void;
+  onWireStartDrag?: (
+    event: MouseEvent<HTMLElement>,
+    startNodeId: NodeId,
+    startPortId: PortId,
+    isInput: boolean,
+  ) => void;
   onWireEndDrag?: (event: MouseEvent<HTMLElement>, endNodeId: NodeId, endPortId: PortId) => void;
   onPortMouseOver?: (
     event: MouseEvent<HTMLElement>,
@@ -336,8 +361,26 @@ const ZoomedOutVisualNodeContent: FC<{
       onSelectNode?.(event.shiftKey);
     });
 
-    const draggingWire = useRecoilValue(draggingWireState);
-    const closestPortToDraggingWire = useRecoilValue(draggingWireClosestPortState);
+    const draggingWire = useAtomValue(draggingWireState);
+    const closestPortToDraggingWire = useAtomValue(draggingWireClosestPortState);
+
+    const preservePortTextCase = useAtomValue(preservePortTextCaseState);
+
+    const handleIfPortMouseDown = useStableCallback(
+      (event: MouseEvent<HTMLDivElement>, port: PortId, isInput: boolean) => {
+        event.stopPropagation();
+        event.preventDefault();
+        onWireStartDrag?.(event, node.id, port, isInput);
+      },
+    );
+
+    const handleIfPortMouseUp = useStableCallback((event: MouseEvent<HTMLDivElement>, port: PortId) => {
+      onWireEndDrag?.(event, node.id, port);
+    });
+
+    const ifConnected =
+      connections.some((conn) => conn.inputNodeId === node.id && conn.inputId === IF_PORT.id) ||
+      (draggingWire?.endNodeId === node.id && draggingWire?.endPortId === IF_PORT.id);
 
     return (
       <>
@@ -390,6 +433,26 @@ const ZoomedOutVisualNodeContent: FC<{
           )}
         </div>
 
+        {node.isConditional && (
+          <div className="node-title-ports input-ports">
+            <Port
+              connected={ifConnected}
+              canDragTo={draggingWire ? !draggingWire.startPortIsInput : false}
+              closest={closestPortToDraggingWire?.nodeId === node.id && closestPortToDraggingWire.portId === IF_PORT.id}
+              id={`$if` as PortId}
+              definition={IF_PORT}
+              nodeId={node.id}
+              title="if"
+              input
+              preservePortCase={preservePortTextCase}
+              onMouseOver={onPortMouseOver}
+              onMouseOut={onPortMouseOut}
+              onMouseDown={handleIfPortMouseDown}
+              onMouseUp={handleIfPortMouseUp}
+            />
+          </div>
+        )}
+
         {isKnownNodeType && (
           <NodePortsRenderer
             node={node}
@@ -420,6 +483,7 @@ const NormalVisualNodeContent: FC<{
   processPage: number | 'latest';
   isPinned: boolean;
   isHistoricalChanged: boolean;
+  isHovered: boolean;
   onWireStartDrag?: (
     event: MouseEvent<HTMLElement>,
     startNodeId: NodeId,
@@ -444,6 +508,7 @@ const NormalVisualNodeContent: FC<{
     portId: PortId,
     definition: NodeInputDefinition | NodeOutputDefinition,
   ) => void;
+  onResizeFinish?: (node: ChartNode, startWidth: number, startHeight: number) => void;
 }> = memo(
   ({
     heightCache,
@@ -462,6 +527,8 @@ const NormalVisualNodeContent: FC<{
     onPortMouseOut,
     isKnownNodeType,
     isHistoricalChanged,
+    onResizeFinish,
+    isHovered,
   }) => {
     useDependsOnPlugins();
 
@@ -530,6 +597,18 @@ const NormalVisualNodeContent: FC<{
       }
     });
 
+    const handleResizeEnd = useStableCallback((event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      onResizeFinish?.(node, initialWidth ?? 200, initialHeight ?? 200);
+
+      setInitialWidth(undefined);
+      setInitialHeight(undefined);
+      setInitialMouseX(0);
+      setInitialMouseY(0);
+    });
+
     const selectedProcessRun =
       lastRun && lastRun.length > 0
         ? lastRun?.at(processPage === 'latest' ? lastRun.length - 1 : processPage)?.data
@@ -550,10 +629,10 @@ const NormalVisualNodeContent: FC<{
       onSelectNode?.(event.shiftKey);
     });
 
-    const draggingWire = useRecoilValue(draggingWireState);
-    const closestPortToDraggingWire = useRecoilValue(draggingWireClosestPortState);
+    const draggingWire = useAtomValue(draggingWireState);
+    const closestPortToDraggingWire = useAtomValue(draggingWireClosestPortState);
 
-    const setPinnedNodes = useSetRecoilState(pinnedNodesState);
+    const setPinnedNodes = useSetAtom(pinnedNodesState);
 
     const togglePinned = useStableCallback(() => {
       setPinnedNodes((prev) => {
@@ -565,7 +644,7 @@ const NormalVisualNodeContent: FC<{
       });
     });
 
-    const setViewingNodeChanges = useSetRecoilState(viewingNodeChangesState);
+    const setViewingNodeChanges = useSetAtom(viewingNodeChangesState);
 
     const viewChanges = () => {
       if (!isHistoricalChanged) {
@@ -574,6 +653,24 @@ const NormalVisualNodeContent: FC<{
 
       setViewingNodeChanges(node.id);
     };
+
+    const preservePortTextCase = useAtomValue(preservePortTextCaseState);
+
+    const handleIfPortMouseDown = useStableCallback(
+      (event: MouseEvent<HTMLDivElement>, port: PortId, isInput: boolean) => {
+        event.stopPropagation();
+        event.preventDefault();
+        onWireStartDrag?.(event, node.id, port, isInput);
+      },
+    );
+
+    const handleIfPortMouseUp = useStableCallback((event: MouseEvent<HTMLDivElement>, port: PortId) => {
+      onWireEndDrag?.(event, node.id, port);
+    });
+
+    const ifConnected =
+      connections.some((conn) => conn.inputNodeId === node.id && conn.inputId === IF_PORT.id) ||
+      (draggingWire?.endNodeId === node.id && draggingWire?.endPortId === IF_PORT.id);
 
     return (
       <>
@@ -657,6 +754,27 @@ const NormalVisualNodeContent: FC<{
             </Tooltip>
           </div>
         </div>
+
+        {node.isConditional && (
+          <div className="node-title-ports input-ports">
+            <Port
+              connected={ifConnected}
+              canDragTo={draggingWire ? !draggingWire.startPortIsInput : false}
+              closest={closestPortToDraggingWire?.nodeId === node.id && closestPortToDraggingWire.portId === IF_PORT.id}
+              id={`$if` as PortId}
+              definition={IF_PORT}
+              nodeId={node.id}
+              title="if"
+              input
+              preservePortCase={preservePortTextCase}
+              onMouseOver={onPortMouseOver}
+              onMouseOut={onPortMouseOut}
+              onMouseDown={handleIfPortMouseDown}
+              onMouseUp={handleIfPortMouseUp}
+            />
+          </div>
+        )}
+
         <ErrorBoundary fallback={<div>Error rendering node body</div>}>
           {isKnownNodeType ? (
             <NodeBody heightCache={heightCache} node={node} />
@@ -679,10 +797,14 @@ const NormalVisualNodeContent: FC<{
         )}
 
         <ErrorBoundary fallback={<div>Error rendering node output</div>}>
-          <NodeOutput node={node} />
+          <NodeOutput node={node} isHovered={isHovered} />
         </ErrorBoundary>
         <div className="node-resize">
-          <ResizeHandle onResizeStart={handleResizeStart} onResizeMove={handleResizeMove} />
+          <ResizeHandle
+            onResizeStart={handleResizeStart}
+            onResizeMove={handleResizeMove}
+            onResizeEnd={handleResizeEnd}
+          />
         </div>
       </>
     );

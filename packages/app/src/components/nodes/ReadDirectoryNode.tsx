@@ -13,23 +13,7 @@ import {
 import { type NodeComponentDescriptor } from '../../hooks/useNodeTypes.js';
 import { ioProvider } from '../../utils/globals.js';
 import { type InputsOrOutputsWithRefs } from '../../state/dataFlow';
-
-export const ReadDirectoryNodeOutput: FC<{ outputs: InputsOrOutputsWithRefs }> = ({ outputs }) => {
-  const outputPaths = expectType(outputs['paths' as PortId] as DataValue, 'string[]');
-  return (
-    <div>
-      {outputPaths.length === 0 ? (
-        <div>No files found</div>
-      ) : (
-        <div>
-          {outputPaths.map((path) => (
-            <div key={path}>{path}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+import { syncWrapper } from '../../utils/syncWrapper';
 
 const container = css`
   font-family: 'Roboto', sans-serif;
@@ -99,7 +83,7 @@ export const ReadDirectoryNodeEditor: FC<ReadDirectoryNodeEditorProps> = ({ node
           Pick Directory
         </label>
         <div>
-          <Button onClick={handleBrowseClick}>Browse...</Button>
+          <Button onClick={syncWrapper(handleBrowseClick)}>Browse...</Button>
           <div>Current Directory: {node.data.path}</div>
         </div>
         <Toggle
@@ -242,6 +226,5 @@ export const ReadDirectoryNodeEditor: FC<ReadDirectoryNodeEditorProps> = ({ node
 };
 
 export const readDirectoryNodeDescriptor: NodeComponentDescriptor<'readDirectory'> = {
-  OutputSimple: ReadDirectoryNodeOutput,
   Editor: ReadDirectoryNodeEditor,
 };

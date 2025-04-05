@@ -1,3 +1,5 @@
+import { DEFAULT_CHAT_NODE_TIMEOUT } from '../../utils/defaults.js';
+
 // https://github.com/openai/openai-node/issues/18#issuecomment-1518715285
 export class EventSourceResponse extends Response {
   name: string;
@@ -31,7 +33,7 @@ export class EventSourceResponse extends Response {
 
     try {
       while (true) {
-        const { done, value } = await this.raceWithTimeout(reader.read());
+        const { done, value } = await this.raceWithTimeout(reader.read(), DEFAULT_CHAT_NODE_TIMEOUT);
         if (done) {
           break;
         }
@@ -43,7 +45,7 @@ export class EventSourceResponse extends Response {
   }
 
   private async raceWithTimeout<T>(promise: Promise<T>, timeout = 5000): Promise<T> {
-    // eslint-disable-next-line no-async-promise-executor -- Error handled correctly
+    // eslint-disable-next-line no-async-promise-executor,@typescript-eslint/no-misused-promises -- Error handled correctly
     return new Promise(async (resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error('Timeout: API response took too long.'));

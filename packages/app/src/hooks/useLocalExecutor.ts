@@ -8,6 +8,7 @@ import {
   type GraphOutputs,
   globalRivetNodeRegistry,
   type GraphId,
+  type Outputs,
 } from '@ironclad/rivet-core';
 import { produce } from 'immer';
 import { useRef } from 'react';
@@ -16,9 +17,8 @@ import { TauriNativeApi } from '../model/native/TauriNativeApi';
 import { useStableCallback } from './useStableCallback';
 import { useSaveCurrentGraph } from './useSaveCurrentGraph';
 import { useCurrentExecution } from './useCurrentExecution';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
 import { userInputModalQuestionsState, userInputModalSubmitState } from '../state/userInput';
-import { projectContextState, projectDataState, projectState } from '../state/savedGraphs';
+import { loadedProjectState, projectContextState, projectDataState, projectState } from '../state/savedGraphs';
 import { recordExecutionsState, settingsState } from '../state/settings';
 import { graphState } from '../state/graph';
 import { lastRecordingState, loadedRecordingState } from '../state/execution';
@@ -27,22 +27,27 @@ import { trivetState } from '../state/trivet';
 import { runTrivet } from '@ironclad/trivet';
 import { audioProvider, datasetProvider } from '../utils/globals';
 import { entries } from '../../../core/src/utils/typeSafety';
+import { type RunDataByNodeId, lastRunDataByNodeState } from '../state/dataFlow';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { TauriProjectReferenceLoader } from '../model/TauriProjectReferenceLoader';
 
 export function useLocalExecutor() {
-  const project = useRecoilValue(projectState);
-  const graph = useRecoilValue(graphState);
+  const project = useAtomValue(projectState);
+  const graph = useAtomValue(graphState);
   const currentProcessor = useRef<GraphProcessor | null>(null);
   const saveGraph = useSaveCurrentGraph();
   const currentExecution = useCurrentExecution();
-  const setUserInputModalSubmit = useSetRecoilState(userInputModalSubmitState);
-  const setUserInputQuestions = useSetRecoilState(userInputModalQuestionsState);
-  const savedSettings = useRecoilValue(settingsState);
-  const loadedRecording = useRecoilValue(loadedRecordingState);
-  const setLastRecordingState = useSetRecoilState(lastRecordingState);
-  const [{ testSuites }, setTrivetState] = useRecoilState(trivetState);
-  const recordExecutions = useRecoilValue(recordExecutionsState);
-  const projectData = useRecoilValue(projectDataState);
-  const projectContext = useRecoilValue(projectContextState(project.metadata.id));
+  const setUserInputModalSubmit = useSetAtom(userInputModalSubmitState);
+  const setUserInputQuestions = useSetAtom(userInputModalQuestionsState);
+  const savedSettings = useAtomValue(settingsState);
+  const loadedRecording = useAtomValue(loadedRecordingState);
+  const setLastRecordingState = useSetAtom(lastRecordingState);
+  const [{ testSuites }, setTrivetState] = useAtom(trivetState);
+  const recordExecutions = useAtomValue(recordExecutionsState);
+  const projectData = useAtomValue(projectDataState);
+  const projectContext = useAtomValue(projectContextState(project.metadata.id));
+  const lastRunData = useAtomValue(lastRunDataByNodeState);
+  const loadedProject = useAtomValue(loadedProjectState);
 
   function attachGraphEvents(processor: GraphProcessor) {
     processor.on('nodeStart', currentExecution.onNodeStart);
@@ -90,6 +95,7 @@ export function useLocalExecutor() {
       options: {
         graphId?: GraphId;
         to?: NodeId[];
+        from?: NodeId;
       } = {},
     ) => {
       try {
@@ -112,12 +118,17 @@ export function useLocalExecutor() {
         };
 
         const recorder = new ExecutionRecorder();
-        const processor = new GraphProcessor(tempProject, graphToRun);
+        const processor = new GraphProcessor(tempProject, graphToRun, undefined, true);
         processor.executor = 'browser';
         processor.recordingPlaybackChatLatency = savedSettings.recordingPlaybackLatency ?? 1000;
 
         if (options.to) {
           processor.runToNodeIds = options.to;
+        }
+
+        if (options.from) {
+          preloadDependentDataForNode(processor, options.from, lastRunData);
+          processor.runFromNodeId = options.from;
         }
 
         if (recordExecutions) {
@@ -148,6 +159,8 @@ export function useLocalExecutor() {
               nativeApi: new TauriNativeApi(),
               datasetProvider,
               audioProvider,
+              projectPath: loadedProject.path ?? undefined,
+              projectReferenceLoader: new TauriProjectReferenceLoader(),
             },
             {},
             contextValues,
@@ -198,7 +211,7 @@ export function useLocalExecutor() {
             }));
           },
           runGraph: async (project, graphId, inputs) => {
-            const processor = new GraphProcessor(project, graphId);
+            const processor = new GraphProcessor(project, graphId, undefined, true);
             processor.executor = 'browser';
             attachGraphEvents(processor);
             return processor.processGraph(
@@ -256,4 +269,43 @@ export function useLocalExecutor() {
     tryResumeGraph,
     tryRunTests,
   };
+}
+
+function preloadDependentDataForNode(processor: GraphProcessor, nodeId: NodeId, previousRunData: RunDataByNodeId) {
+  const dependencyNodes = processor.getDependencyNodesDeep(nodeId);
+
+  for (const dependencyNode of dependencyNodes) {
+    const dependencyNodeData = previousRunData[dependencyNode];
+
+    if (!dependencyNodeData) {
+      throw new Error(`Node ${dependencyNode} was not found in the previous run data, cannot continue preloading data`);
+    }
+
+    const firstExecution = dependencyNodeData[0];
+
+    if (!firstExecution?.data.outputData) {
+      throw new Error(
+        `Node ${dependencyNode} has no output data in the previous run data, cannot continue preloading data`,
+      );
+    }
+
+    const { outputData } = firstExecution.data;
+
+    // Convert back to DataValue from DataValueWithRefs
+    const outputDataWithoutRefs = Object.fromEntries(
+      Object.entries(outputData).map(([portId, dataValueWithRefs]) => {
+        if (dataValueWithRefs.type === 'image') {
+          throw new Error('Not implemented yed');
+        } else if (dataValueWithRefs.type === 'binary') {
+          throw new Error('Not implemented yed');
+        } else if (dataValueWithRefs.type === 'audio') {
+          throw new Error('Not implemented yed');
+        } else {
+          return [portId, dataValueWithRefs];
+        }
+      }),
+    ) as Outputs;
+
+    processor.preloadNodeData(dependencyNode, outputDataWithoutRefs);
+  }
 }

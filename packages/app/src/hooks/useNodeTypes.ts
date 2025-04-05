@@ -16,30 +16,30 @@ import { commentNodeDescriptor } from '../components/nodes/CommentNode';
 import { imageNodeDescriptor } from '../components/nodes/ImageNode';
 import { audioNodeDescriptor } from '../components/nodes/AudioNode';
 import { appendToDatasetNodeDescriptor } from '../components/nodes/AppendToDatasetNode';
-import { useRecoilValue } from 'recoil';
 import { pluginRefreshCounterState } from '../state/plugins';
 import { loadDatasetNodeDescriptor } from '../components/nodes/LoadDatasetNode';
 import { datasetNearestNeighborsNodeDescriptor } from '../components/nodes/DatasetNearestNeighborsNode';
 import { getDatasetRowNodeDescriptor } from '../components/nodes/GetDatasetRowNode';
 import { replaceDatasetNodeDescriptor } from '../components/nodes/ReplaceDatasetNode';
 import { type InputsOrOutputsWithRefs } from '../state/dataFlow';
+import { useAtomValue } from 'jotai';
 
 export type UnknownNodeComponentDescriptor = {
   Body?: FC<{ node: ChartNode }>;
-  Output?: FC<{ node: ChartNode }>;
+  Output?: FC<{ node: ChartNode; isCompact: boolean }>;
   Editor?: FC<{ node: ChartNode; onChange?: (node: ChartNode) => void }>;
   FullscreenOutput?: FC<{ node: ChartNode }>;
-  OutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs }>;
+  OutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs; isCompact: boolean }>;
   FullscreenOutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs; renderMarkdown: boolean }>;
   defaultRenderMarkdown?: boolean;
 };
 
 export type NodeComponentDescriptor<T extends BuiltInNodeType> = {
   Body?: FC<{ node: NodeOfType<T> }>;
-  Output?: FC<{ node: NodeOfType<T> }>;
+  Output?: FC<{ node: NodeOfType<T>; isCompact: boolean }>;
   Editor?: FC<{ node: NodeOfType<T>; onChange?: (node: NodeOfType<T>) => void }>;
   FullscreenOutput?: FC<{ node: NodeOfType<T> }>;
-  OutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs }>;
+  OutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs; isCompact: boolean }>;
   FullscreenOutputSimple?: FC<{ outputs: InputsOrOutputsWithRefs; renderMarkdown: boolean }>;
   defaultRenderMarkdown?: boolean;
 };
@@ -66,7 +66,7 @@ const overriddenDescriptors: Partial<NodeComponentDescriptors> = {
 };
 
 export function useNodeTypes(): NodeComponentDescriptors {
-  const counter = useRecoilValue(pluginRefreshCounterState);
+  const counter = useAtomValue(pluginRefreshCounterState);
 
   return useMemo(() => {
     if (Number.isNaN(counter)) {

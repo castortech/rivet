@@ -4,7 +4,7 @@ import Portal from '@atlaskit/portal';
 import { type DatasetId, type DatasetMetadata, newId, getError } from '@ironclad/rivet-core';
 import { type FC, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useAtomValue, useAtom } from 'jotai';
 import { useContextMenu } from '../../hooks/useContextMenu';
 import { useDatasets } from '../../hooks/useDatasets';
 import { selectedDatasetState } from '../../state/dataStudio';
@@ -12,6 +12,7 @@ import { projectState } from '../../state/savedGraphs';
 import { DatasetListItem } from './DatasetListItem';
 import { css } from '@emotion/react';
 import { autoUpdate, shift, useFloating } from '@floating-ui/react';
+import { swallowPromise, syncWrapper } from '../../utils/syncWrapper';
 
 const contextMenuStyles = css`
   position: absolute;
@@ -27,7 +28,7 @@ const contextMenuStyles = css`
 `;
 
 export const DatasetList: FC<{}> = () => {
-  const [selectedDataset, setSelectedDataset] = useRecoilState(selectedDatasetState);
+  const [selectedDataset, setSelectedDataset] = useAtom(selectedDatasetState);
   const {
     refs,
     floatingStyles,
@@ -39,7 +40,7 @@ export const DatasetList: FC<{}> = () => {
   } = useContextMenu();
   const [renamingDataset, setRenamingDataset] = useState<DatasetId>();
 
-  const project = useRecoilValue(projectState);
+  const project = useAtomValue(projectState);
   const { datasets, ...datasetsMethods } = useDatasets(project.metadata.id);
 
   const newDataset = async () => {
@@ -90,7 +91,7 @@ export const DatasetList: FC<{}> = () => {
     >
       <header>
         <h2>Datasets</h2>
-        <Button appearance="primary" onClick={newDataset}>
+        <Button appearance="primary" onClick={syncWrapper(newDataset)}>
           +
         </Button>
       </header>
@@ -123,7 +124,9 @@ export const DatasetList: FC<{}> = () => {
           >
             <div ref={refs.setFloating} style={floatingStyles} css={contextMenuStyles}>
               <DropdownItem onClick={() => setRenamingDataset(selectedDatasetForContextMenu?.id)}>Rename</DropdownItem>
-              <DropdownItem onClick={() => deleteDataset(selectedDatasetForContextMenu!)}>Delete</DropdownItem>
+              <DropdownItem onClick={() => swallowPromise(deleteDataset(selectedDatasetForContextMenu!))}>
+                Delete
+              </DropdownItem>
             </div>
           </div>
         )}

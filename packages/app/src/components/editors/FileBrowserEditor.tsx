@@ -11,12 +11,13 @@ import {
 import { nanoid } from 'nanoid/non-secure';
 import prettyBytes from 'pretty-bytes';
 import { type FC } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 import { projectDataState } from '../../state/savedGraphs';
 import { ioProvider } from '../../utils/globals';
 import { type SharedEditorProps } from './SharedEditorProps';
 import { getHelperMessage } from './editorUtils';
 import mime from 'mime';
+import { syncWrapper } from '../../utils/syncWrapper';
 
 export const DefaultFileBrowserEditor: FC<
   SharedEditorProps & {
@@ -24,28 +25,30 @@ export const DefaultFileBrowserEditor: FC<
   }
 > = ({ node, isReadonly, isDisabled, onChange, editor }) => {
   const data = node.data as Record<string, unknown>;
-  const projectData = useRecoilValue(projectDataState);
+  const projectData = useAtomValue(projectDataState);
   const helperMessage = getHelperMessage(editor, node.data);
 
   const pickFile = async () => {
-    await ioProvider.readFileAsBinary(async (binaryData, fileName) => {
-      const dataId = nanoid() as DataId;
-      onChange(
-        {
-          ...node,
-          data: {
-            ...data,
-            [editor.dataKey]: {
-              refId: dataId,
-            } satisfies DataRef,
-            [editor.mediaTypeDataKey]: mime.getType(fileName) ?? 'application/octet-stream',
+    await ioProvider.readFileAsBinary(
+      syncWrapper(async (binaryData: Uint8Array, fileName: string) => {
+        const dataId = nanoid() as DataId;
+        onChange(
+          {
+            ...node,
+            data: {
+              ...data,
+              [editor.dataKey]: {
+                refId: dataId,
+              } satisfies DataRef,
+              [editor.mediaTypeDataKey]: mime.getType(fileName) ?? 'application/octet-stream',
+            },
           },
-        },
-        {
-          [dataId]: (await uint8ArrayToBase64(binaryData)) ?? '',
-        },
-      );
-    });
+          {
+            [dataId]: (await uint8ArrayToBase64(binaryData)) ?? '',
+          },
+        );
+      }),
+    );
   };
 
   const dataRef = data[editor.dataKey] as DataRef | undefined;
@@ -58,7 +61,7 @@ export const DefaultFileBrowserEditor: FC<
     <Field name={editor.dataKey} label={editor.label}>
       {() => (
         <div>
-          <Button onClick={pickFile} isDisabled={isReadonly || isDisabled}>
+          <Button onClick={syncWrapper(pickFile)} isDisabled={isReadonly || isDisabled}>
             Pick File
           </Button>
           <div className="current">{dataUri && <span>Data ({prettyBytes(dataByteLength ?? NaN)})</span>}</div>
@@ -94,7 +97,7 @@ export const DefaultFilePathBrowserEditor: FC<
     <Field name={editor.dataKey} label={editor.label}>
       {() => (
         <div>
-          <Button onClick={pickFile} isDisabled={isReadonly || isDisabled}>
+          <Button onClick={syncWrapper(pickFile)} isDisabled={isReadonly || isDisabled}>
             Pick File
           </Button>
           <div className="current">{data[editor.dataKey] != null && <span>{data[editor.dataKey] as string}</span>}</div>
