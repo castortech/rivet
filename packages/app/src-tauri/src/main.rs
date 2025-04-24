@@ -40,6 +40,10 @@ fn main() {
             if let Some(path) = app.path_resolver().app_local_data_dir() {
                 app.fs_scope().allow_directory(path, true)?;
             }
+						//next 2 lines from: https://github.com/tauri-apps/tauri/issues/1213#issuecomment-2276038084
+						//allow in dev to force open devtools on startup
+						// #[cfg(debug_assertions)]
+       			// app.get_window("main").unwrap().open_devtools(); // `main` is the first window from tauri.conf.json without an explicit label
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -188,6 +188,7 @@ export class ProjectRevisionCalculator {
   }
 
   async loadProjectAtRevision(revision: CalculatedRevision, previousCommit: boolean) {
+		console.log("loadProjectAtRevision:" + revision + ",prev:" + previousCommit);
     try {
       const projectAtRevision = await new Command(
         'git',
@@ -202,6 +203,7 @@ export class ProjectRevisionCalculator {
       }
 
       const deserialized = await deserializeProjectAsync(projectAtRevision.stdout);
+			console.log("loadProjectAtRevision deserialized:" + deserialized);
 
       if (previousCommit) {
         revision.projectBeforeRevision = deserialized;

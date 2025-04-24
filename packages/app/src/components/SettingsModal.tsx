@@ -317,8 +317,8 @@ export const GeneralSettingsPage: FC = () => {
               />
             </div>
             <HelperMessage>
-              Throttles the stream of chat node data into Rivet. Increasing this can improve performance. Set to 0 to
-              disable.
+              Throttles the stream of chat node data into Aidon Rivet. Increasing this can improve performance.
+							Set to 0 to disable.
             </HelperMessage>
           </>
         )}
@@ -635,7 +635,7 @@ export const UpdatesSettingsPage: FC = () => {
   return (
     <div css={fields}>
       <p>
-        You are currently on <strong>Rivet {currentVersion}</strong>
+        You are currently on <strong>Aidon Rivet {currentVersion}</strong>
       </p>
       <Field name="check-for-updates">
         {() => (

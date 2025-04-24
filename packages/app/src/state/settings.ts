@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
+import { css, SerializedStyles } from '@emotion/react';
 import { type Settings } from '@ironclad/rivet-core';
 import { isInTauri } from '../utils/tauri';
 import { DEFAULT_CHAT_NODE_TIMEOUT } from '../../../core/src/utils/defaults';

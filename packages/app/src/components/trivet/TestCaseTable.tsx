@@ -13,6 +13,8 @@ import MultiplyIcon from 'majesticons/line/multiply-line.svg?react';
 import PlayIcon from 'majesticons/line/play-circle-line.svg?react';
 import Popup from '@atlaskit/popup';
 import TextField from '@atlaskit/textfield';
+import { themeState } from '../../state/settings';
+import { useAtomValue } from 'jotai';
 
 const containerStyles = css`
   display: flex;
@@ -198,6 +200,7 @@ export const TestCaseTable: FC<TestCaseTableProps> = ({
   }
 
   const { contextMenuRef, showContextMenu, contextMenuData, handleContextMenu } = useContextMenu();
+	const theme = useAtomValue(themeState);
 
   const handleSidebarContextMenu = useStableCallback((e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -298,8 +301,8 @@ export const TestCaseTable: FC<TestCaseTableProps> = ({
       <Portal>
         {showContextMenu && contextMenuData.data?.type === 'test-case-table' && (
           <div
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'test-suite-list-context-menu')}
             css={contextMenuStyles}
-            className="test-suite-list-context-menu"
             style={{
               zIndex: 500,
               left: contextMenuData.x,
@@ -311,8 +314,8 @@ export const TestCaseTable: FC<TestCaseTableProps> = ({
         )}
         {showContextMenu && contextMenuData.data?.type === 'test-case-item' && (
           <div
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'test-suite-list-context-menu')}
             css={contextMenuStyles}
-            className="test-suite-list-context-menu"
             style={{
               zIndex: 500,
               left: contextMenuData.x,

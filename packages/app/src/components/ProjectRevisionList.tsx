@@ -4,15 +4,17 @@ import { useAtomValue } from 'jotai';
 import { revisionStyles } from './GraphRevisionList';
 import Button from '@atlaskit/button';
 import { useHasGitHistory, useProjectRevisions } from '../hooks/useGraphRevisions';
+import { themeState } from '../state/settings';
 import { type CalculatedRevision } from '../utils/ProjectRevisionCalculator';
 import Modal, { ModalTransition, ModalHeader, ModalTitle, ModalBody, ModalFooter } from '@atlaskit/modal-dialog';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import { type GraphId } from '@ironclad/rivet-core';
 import { useChooseHistoricalGraph } from '../hooks/useChooseHistoricalGraph';
 
 export const ProjectRevisions: FC = () => {
   const projectState = useAtomValue(loadedProjectState);
-
+	const theme = useAtomValue(themeState);
   const [enabled, setEnabled] = useState(false);
 
   const hasRevisions = useHasGitHistory();
@@ -23,26 +25,28 @@ export const ProjectRevisions: FC = () => {
 
   if (!enabled) {
     return (
-      <div css={revisionStyles}>
+      <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
         <Button onClick={() => setEnabled(true)}>Show Revisions</Button>
       </div>
     );
   }
 
   return (
-    <div css={revisionStyles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
       <ProjectRevisionList />
     </div>
   );
 };
 
 const ProjectRevisionList: FC = () => {
+	const theme = useAtomValue(themeState);
+
   const { revisions, isLoading, stop, resume, numTotalRevisions, numProcessedRevisions } = useProjectRevisions();
 
   const [selectedRevision, setSelectedRevision] = useState<CalculatedRevision | undefined>();
 
   return (
-    <div css={revisionStyles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
       <div className="revisions">
         {isLoading ? (
           <div className="loading-area">
@@ -111,6 +115,8 @@ const ProjectRevisionChangesModal: FC<{
   revision: CalculatedRevision | undefined;
   onClose: () => void;
 }> = ({ revision, onClose }) => {
+	const theme = useAtomValue(themeState);
+
   return (
     <ModalTransition>
       {revision && (
@@ -119,7 +125,7 @@ const ProjectRevisionChangesModal: FC<{
             <ModalTitle>Revision {revision.hash}</ModalTitle>
           </ModalHeader>
           <ModalBody>
-            <div css={modalBodyStyles}>
+            <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={modalBodyStyles}>
               <div className="author">
                 <span>
                   {revision.authorName} &lt;{revision.authorEmail}&gt;

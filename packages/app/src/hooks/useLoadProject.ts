@@ -42,8 +42,10 @@ export function useLoadProject() {
         setStaticData(projectInfo.project.data);
       }
 
+			const normalizedPath = projectInfo.fsPath?.replace(/\\/g, '/') ?? '';
+
       setLoadedProjectState({
-        path: projectInfo.fsPath ?? '',
+        path: normalizedPath,
         loaded: true,
       });
 

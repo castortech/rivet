@@ -23,8 +23,8 @@
     "start": "yarn build && node bin/cli.js"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.8",
     "@alpic80/rivet-node": "workspace:^",
+    "@hono/node-server": "^1.13.8",
     "@types/dotenv": "^8.2.3",
     "chalk": "^5.4.1",
     "didyoumean2": "^7.0.4",

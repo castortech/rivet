@@ -29,7 +29,7 @@ export class NodeCodeRunner implements CodeRunner {
     }
 
     if (options.includeRivet) {
-      const Rivet = await import('@ironclad/rivet-node');
+      const Rivet = await import('@alpic80/rivet-node');
 
       argNames.push('Rivet');
       args.push(Rivet);

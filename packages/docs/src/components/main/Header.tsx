@@ -19,8 +19,8 @@ export const Header: React.FC = () => {
       <div className={layout.contentWrapper}>
         <nav className={styles.nav}>
           <a className={styles.logo} href="/">
-            <img width="40" height="40" src="img/logo.svg" alt="Rivet App Logo" />
-            <span className={styles.logoText}>Rivet</span>
+            <img width="40" height="40" src="img/logo.svg" alt="Aidon Rivet App Logo" />
+            <span className={styles.logoText}>Aidon Rivet</span>
           </a>
           <div
             className={clsx(styles.hamburger, { [styles.menuOpen]: isMenuOpen })}

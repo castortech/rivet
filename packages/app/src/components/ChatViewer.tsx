@@ -23,6 +23,7 @@ import {
   type DataValueWithRefs,
 } from '../state/dataFlow';
 import { projectState } from '../state/savedGraphs';
+import { themeState } from '../state/settings';
 import { ErrorBoundary } from 'react-error-boundary';
 import TextField from '@atlaskit/textfield';
 import { useGoToNode } from '../hooks/useGoToNode';
@@ -201,6 +202,7 @@ export const ChatViewer: FC<{
   onClose: () => void;
 }> = ({ onClose }) => {
   const project = useAtomValue(projectState);
+	const theme = useAtomValue(themeState);
   const allLastRunData = useAtomValue(lastRunDataByNodeState);
   const [graphFilter, setGraphFilter] = useState('');
   const goToNode = useGoToNode();
@@ -286,7 +288,7 @@ export const ChatViewer: FC<{
   };
 
   return (
-    <div css={styles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={styles}>
       <div className="controls-filters">
         <TextField
           placeholder="Graph Filter..."

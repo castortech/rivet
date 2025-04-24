@@ -69,7 +69,7 @@ export function useCheckForUpdate({
       toast.success(
         ({ closeToast }) => (
           <div css={toastStyle}>
-            <div className="info">Rivet version {manifest?.version} is now available!</div>
+            <div className="info">Aidon Rivet version {manifest?.version} is now available!</div>
             <div className="actions">
               <button className="primary" onClick={() => setUpdateModalOpen(true)}>
                 Install
@@ -85,7 +85,7 @@ export function useCheckForUpdate({
         },
       );
     } else if (notifyNoUpdates) {
-      toast.info('Rivet is up to date!');
+      toast.info('Aidon Rivet is up to date!');
     }
   };
 }

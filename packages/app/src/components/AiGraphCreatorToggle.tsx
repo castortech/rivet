@@ -5,6 +5,7 @@ import { showAiGraphCreatorInputState } from './AiGraphCreatorInput';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { sidebarOpenState } from '../state/graphBuilder';
 import clsx from 'clsx';
+import { themeState } from '../state/settings';
 
 const styles = css`
   position: absolute;
@@ -41,6 +42,7 @@ const styles = css`
 export const AiGraphCreatorToggle: FC = () => {
   const setShowAiGraphCreatorInput = useSetAtom(showAiGraphCreatorInputState);
   const isSidebarOpen = useAtomValue(sidebarOpenState);
+	const theme = useAtomValue(themeState);
 
   const handleClick = () => {
     setShowAiGraphCreatorInput((prev) => !prev);

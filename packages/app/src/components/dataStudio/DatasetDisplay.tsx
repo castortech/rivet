@@ -2,6 +2,7 @@ import Button from '@atlaskit/button';
 import { DropdownItem } from '@atlaskit/dropdown-menu';
 import Portal from '@atlaskit/portal';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import {
   type DatasetMetadata,
   type DatasetRow,
@@ -27,6 +28,7 @@ import { InlineEditableTextfield } from '@atlaskit/inline-edit';
 import { useDatasets } from '../../hooks/useDatasets';
 import { useAtomValue } from 'jotai';
 import { projectMetadataState } from '../../state/savedGraphs';
+import { themeState } from '../../state/settings';
 import { swallowPromise, syncWrapper } from '../../utils/syncWrapper';
 
 const datasetDisplayStyles = css`
@@ -113,6 +115,7 @@ export const DatasetDisplay: FC<{
 
   const projectMetadata = useAtomValue(projectMetadataState);
   const datasetsMethods = useDatasets(projectMetadata.id);
+	const theme = useAtomValue(themeState);
 
   const { contextMenuData, contextMenuRef, handleContextMenu, showContextMenu } = useContextMenu();
 
@@ -276,7 +279,7 @@ export const DatasetDisplay: FC<{
       <Portal>
         {showContextMenu && contextMenuData.data?.type === 'cell' && (
           <div
-            className="context-menu"
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'context-menu')}
             css={contextMenuStyles}
             style={{
               zIndex: 500,

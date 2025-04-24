@@ -42,6 +42,7 @@ import TextField from '@atlaskit/textfield';
 import { useFuseSearch } from '../hooks/useFuseSearch';
 import { useImportGraph } from '../hooks/useImportGraph';
 import { expandedFoldersState } from '../state/ui';
+import { themeState } from '../state/settings';
 
 const styles = css`
   display: flex;
@@ -314,6 +315,7 @@ function getFolderNames(folderedGraphs: NodeGraphFolderItem[]): string[] {
 
 export const GraphList: FC<{ onRunGraph?: (graphId: GraphId) => void }> = memo(({ onRunGraph }) => {
   const projectMetadata = useAtomValue(projectMetadataState);
+	const theme = useAtomValue(themeState);
   const [savedGraphs, setSavedGraphs] = useAtom(savedGraphsState);
   const [graph, setGraph] = useAtom(graphState);
   const [searchText, setSearchText] = useState('');
@@ -523,7 +525,7 @@ export const GraphList: FC<{ onRunGraph?: (graphId: GraphId) => void }> = memo((
   });
 
   return (
-    <div css={styles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={styles}>
       <div className="search">
         <input
           autoComplete="off"
@@ -564,7 +566,7 @@ export const GraphList: FC<{ onRunGraph?: (graphId: GraphId) => void }> = memo((
           <Portal>
             {showContextMenu && contextMenuData.data?.type === 'graph-item' && (
               <div
-                className="graph-item-context-menu-pos"
+                className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'graph-item-context-menu-pos')}
                 ref={refs.setReference}
                 style={{
                   zIndex: 500,
@@ -616,7 +618,7 @@ export const GraphList: FC<{ onRunGraph?: (graphId: GraphId) => void }> = memo((
             )}
             {showContextMenu && contextMenuData.data?.type === 'graph-folder' && (
               <div
-                className="graph-item-context-menu-pos"
+								className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'graph-item-context-menu-pos')}
                 ref={refs.setReference}
                 style={{
                   zIndex: 500,
@@ -671,7 +673,7 @@ export const GraphList: FC<{ onRunGraph?: (graphId: GraphId) => void }> = memo((
         <Portal>
           {showContextMenu && contextMenuData.data?.type === 'graph-list' && (
             <div
-              className="graph-list-context-menu-pos"
+							className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'graph-item-context-menu-pos')}
               ref={refs.setReference}
               style={{
                 position: 'absolute',

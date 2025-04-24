@@ -64,8 +64,10 @@ export function useLoadProjectWithFileBrowser() {
         setGraph(graphToLoad);
         centerViewOnGraph(graphToLoad);
 
+				const normalizedPath = path.replace(/\\/g, '/');
+
         setLoadedProjectState({
-          path,
+          path: normalizedPath,
           loaded: true,
         });
 

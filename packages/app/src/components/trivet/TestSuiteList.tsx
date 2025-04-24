@@ -8,6 +8,8 @@ import { DropdownItem } from '@atlaskit/dropdown-menu';
 import { type TrivetTestSuite } from '@ironclad/trivet';
 import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { themeState } from '../../state/settings';
+import { useAtomValue } from 'jotai';
 
 const styles = css`
   min-height: 100%;
@@ -83,6 +85,7 @@ export const TestSuiteList: FC<TestSuiteListProps> = ({
   runTestSuite,
 }) => {
   const { contextMenuRef, showContextMenu, contextMenuData, handleContextMenu } = useContextMenu();
+	const theme = useAtomValue(themeState);
 
   const handleSidebarContextMenu = useStableCallback((e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -134,8 +137,8 @@ export const TestSuiteList: FC<TestSuiteListProps> = ({
       <Portal>
         {showContextMenu && contextMenuData.data?.type === 'test-suite-list' && (
           <div
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'test-suite-list-context-menu')}
             css={contextMenuStyles}
-            className="test-suite-list-context-menu"
             style={{
               zIndex: 500,
               left: contextMenuData.x,
@@ -147,8 +150,8 @@ export const TestSuiteList: FC<TestSuiteListProps> = ({
         )}
         {showContextMenu && contextMenuData.data?.type === 'test-suite-item' && (
           <div
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'test-suite-list-context-menu')}
             css={contextMenuStyles}
-            className="test-suite-list-context-menu"
             style={{
               zIndex: 500,
               left: contextMenuData.x,

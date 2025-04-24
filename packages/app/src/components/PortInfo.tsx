@@ -11,6 +11,7 @@ import {
 import { type CSSProperties, forwardRef, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { draggingWireState } from '../state/graphBuilder';
+import { themeState } from '../state/settings';
 import { lastRunDataState, selectedProcessPageState } from '../state/dataFlow';
 import clsx from 'clsx';
 import { RenderDataValue } from './RenderDataValue';
@@ -109,6 +110,7 @@ export const PortInfo = forwardRef<
   const { definition } = port;
   const { dataType, title, description, id } = definition;
 
+	const theme = useAtomValue(themeState);
   const lastRun = useAtomValue(lastRunDataState(port.nodeId));
   const selectedPage = useAtomValue(selectedProcessPageState(port.nodeId));
 
@@ -158,7 +160,12 @@ export const PortInfo = forwardRef<
 
   return (
     <Portal>
-      <div css={style} ref={ref} style={floatingStyles} className={clsx({ 'has-data': !!portData })}>
+      <div
+				className={clsx('app', theme ? `theme-${theme}` : 'theme-default', 'test-suite-list-context-menu', { 'has-data': !!portData })}
+				css={style}
+				ref={ref}
+				style={floatingStyles}
+			>
         <dl>
           <dt className="id-title">
             {title === id ? (

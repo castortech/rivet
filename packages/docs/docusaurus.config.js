@@ -6,7 +6,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Rivet',
+  title: 'Aidon Rivet',
   tagline: 'IDE and Library for Creating AI Agents',
   favicon: 'img/favicon.png',
 

@@ -13,7 +13,7 @@ export function useWindowTitle() {
       try {
         const currentVersion = await getVersion();
         await appWindow.setTitle(
-          `Rivet ${currentVersion} - ${project.metadata.title} (${
+          `Aidon Rivet ${currentVersion} - ${project.metadata.title} (${
             loadedProject?.path?.trim() ? loadedProject.path : 'Unsaved'
           })`,
         );

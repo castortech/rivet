@@ -12,7 +12,7 @@ import {
 	ChatNodeImpl,
 	type ChatNode,
 	type ChatNodeData,
-	type ChatMessage, 
+	type ChatMessage,
 	type GptFunction,
 	Rivet,
 	globalRivetNodeRegistry,
@@ -74,7 +74,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 			routeMap: Record<string, string>
 			url: string
 		}
-		
+
 		return {
 			title: name,
 			description,
@@ -89,11 +89,11 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 		const pathTemplate = Object.keys(schemaDetail.routeMap).find(
 			key => schemaDetail.routeMap[key] === functionName
 		)
-	
+
 		if (!pathTemplate) {
 			throw new Error(`Path for function ${functionName} not found`)
 		}
-	
+
 		const path = pathTemplate.replace(/:(\w+)/g, (_, paramName) => {
 			const value = parsedArgs.parameters[paramName]
 			if (!value) {
@@ -103,31 +103,31 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 			}
 			return encodeURIComponent(value)
 		})
-	
+
 		if (!path) {
 			throw new Error(`Path for function ${functionName} not found`)
 		}
 		return path
 	}
-	
+
 	async callToolGet(parsedArgs: any, schemaDetail: SchemaDetail, path: string, data: {}) {
 		const queryParams = new URLSearchParams(
 			parsedArgs.parameters
 		).toString()
 		const fullUrl = schemaDetail.url + path + (queryParams ? "?" + queryParams : "")
 		let headers = {}
-	
+
 		// Check if custom headers are set
 		const customHeaders = schemaDetail.headers
 		if (customHeaders && typeof customHeaders === "string") {
 			headers = JSON.parse(customHeaders)
 		}
-	
+
 		const response = await fetch(fullUrl, {
 			method: "GET",
 			headers: headers
 		})
-	
+
 		if (!response.ok) {
 			data = {
 				error: response.statusText
@@ -137,39 +137,39 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 		}
 		return data
 	}
-	
+
 	async callToolPost(schemaDetail: SchemaDetail, path: string, parsedArgs: any, data: {}) {
 		let headers = {
 			"Content-Type": "application/json"
 		}
-	
+
 		// Check if custom headers are set
 		const customHeaders = schemaDetail.headers // Moved this line up to the loop
-	
+
 		// Check if custom headers are set and are of type string
 		if (customHeaders && typeof customHeaders === "string") {
 			let parsedCustomHeaders = JSON.parse(customHeaders) as Record<
 				string, string
 			>
-	
+
 			headers = {
 				...headers,
 				...parsedCustomHeaders
 			}
 		}
-	
+
 		const fullUrl = schemaDetail.url + path
-	
+
 		const bodyContent = parsedArgs.requestBody || parsedArgs
-	
+
 		const requestInit = {
 			method: "POST",
 			headers,
 			body: JSON.stringify(bodyContent) // Use the extracted requestBody or the entire parsedArgs
 		}
-	
+
 		const response = await fetch(fullUrl, requestInit)
-	
+
 		if (!response.ok) {
 			data = {
 				error: response.statusText
@@ -179,7 +179,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 		}
 		return data
 	}
-	
+
 	// Override the process function
   async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
 		//make sure not to include functions if we have no way to run them after.
@@ -230,7 +230,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
           message: JSON.stringify(data)
         })
       }
-			
+
 			inputs = omit(inputs, ['functions', 'prompt'])
 			inputs['prompt' as PortId] = messages as unknown as DataValue
 			outputs = await super.process(inputs, context)
@@ -246,7 +246,7 @@ const createPluginNodeImpl = (chatNode: ChartNode): PluginNodeImpl<ChatAidonNode
 	return {
 		create(): ChatAidonNode {
 			return impl.create()
-		},		
+		},
 		getInputDefinitions(data): NodeInputDefinition[] {
 			impl.chartNode.data = data  // Ensure data is set correctly in the base class
 			const inputs = impl.getInputDefinitions()
@@ -272,7 +272,7 @@ const createPluginNodeImpl = (chatNode: ChartNode): PluginNodeImpl<ChatAidonNode
 			impl.chartNode.data = data  // Ensure data is set correctly in the base class
 			return impl.getEditors()
 		},
-		getBody(data): string {
+		getBody(data): string | undefined {
 			impl.chartNode.data = data  // Ensure data is set correctly in the base class
 			return impl.getBody()
 		},

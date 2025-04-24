@@ -9,8 +9,10 @@ import { useContextMenu } from '../../hooks/useContextMenu';
 import { useDatasets } from '../../hooks/useDatasets';
 import { selectedDatasetState } from '../../state/dataStudio';
 import { projectState } from '../../state/savedGraphs';
+import { themeState } from '../../state/settings';
 import { DatasetListItem } from './DatasetListItem';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import { autoUpdate, shift, useFloating } from '@floating-ui/react';
 import { swallowPromise, syncWrapper } from '../../utils/syncWrapper';
 
@@ -41,6 +43,8 @@ export const DatasetList: FC<{}> = () => {
   const [renamingDataset, setRenamingDataset] = useState<DatasetId>();
 
   const project = useAtomValue(projectState);
+	const theme = useAtomValue(themeState);
+
   const { datasets, ...datasetsMethods } = useDatasets(project.metadata.id);
 
   const newDataset = async () => {
@@ -114,6 +118,7 @@ export const DatasetList: FC<{}> = () => {
       <Portal>
         {showContextMenu && contextMenuData.data?.type === 'dataset' && (
           <div
+						className={clsx('app', theme ? `theme-${theme}` : 'theme-default')}
             ref={refs.setReference}
             style={{
               position: 'absolute',

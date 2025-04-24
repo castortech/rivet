@@ -19,6 +19,7 @@ import {
   type ChatMessageDataValue,
 } from '@ironclad/rivet-core';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import CopyIcon from 'majesticons/line/clipboard-line.svg?react';
 import ExpandIcon from 'majesticons/line/maximize-line.svg?react';
 import FlaskIcon from 'majesticons/line/flask-line.svg?react';
@@ -32,6 +33,7 @@ import { entries } from '../../../core/src/utils/typeSafety';
 import { useToggle } from 'ahooks';
 import Toggle from '@atlaskit/toggle';
 import { pinnedNodesState } from '../state/graphBuilder';
+import { themeState } from '../state/settings';
 import { useNodeIO } from '../hooks/useGetNodeIO';
 import { Tooltip } from './Tooltip';
 import { getGlobalDataRef } from '../utils/globals';
@@ -178,6 +180,7 @@ const fullscreenOutputButtonsCss = css`
 
 const NodeFullscreenOutput: FC<{ node: ChartNode }> = ({ node }) => {
   const output = useAtomValue(lastRunDataState(node.id));
+	const theme = useAtomValue(themeState);
   const [selectedPage, setSelectedPage] = useAtom(selectedProcessPageState(node.id));
 
   const { FullscreenOutput, Output, OutputSimple, FullscreenOutputSimple, defaultRenderMarkdown } =
@@ -330,7 +333,7 @@ const NodeFullscreenOutput: FC<{ node: ChartNode }> = ({ node }) => {
   }
 
   return (
-    <div css={fullscreenOutputCss}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={fullscreenOutputCss}>
       <header className="fullscreen-header">
         {output.length > 1 ? (
           <div className="picker">

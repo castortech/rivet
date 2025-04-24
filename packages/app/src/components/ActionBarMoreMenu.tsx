@@ -1,6 +1,7 @@
 import Portal from '@atlaskit/portal';
 import Select from '@atlaskit/select';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import { type FC, useRef } from 'react';
 import { useLoadRecording } from '../hooks/useLoadRecording';
 import { useRemoteDebugger } from '../hooks/useRemoteDebugger';
@@ -15,9 +16,9 @@ import ForwardCircleIcon from 'majesticons/line/forward-circle-line.svg?react';
 import CopyIcon from 'majesticons/line/clipboard-plus-line.svg?react';
 import { CopyAsTestCaseModal } from './CopyAsTestCaseModal';
 import { useToggle } from 'ahooks';
-import { executorOptions } from '../state/settings';
+import { themeState, executorOptions } from '../state/settings';
 import QuestionIcon from 'majesticons/line/question-circle-line.svg?react';
-import { useSetAtom, useAtom } from 'jotai';
+import { useSetAtom, useAtom, useAtomValue } from 'jotai';
 import { swallowPromise, syncWrapper } from '../utils/syncWrapper';
 
 const moreMenuStyles = css`
@@ -84,6 +85,7 @@ export const ActionBarMoreMenu: FC<{
   const selectedExecutorOption = executorOptions.find((option) => option.value === selectedExecutor);
   const { loadRecording } = useLoadRecording();
   const setHelpModalOpen = useSetAtom(helpModalOpenState);
+	const theme = useAtomValue(themeState);
 
   const openDebuggerPanel = () => {
     setDebuggerPanelOpen(true);
@@ -109,7 +111,7 @@ export const ActionBarMoreMenu: FC<{
   const isActuallyRemoteDebugging = remoteDebugger.started && !remoteDebugger.isInternalExecutor;
 
   return (
-    <div css={moreMenuStyles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={moreMenuStyles}>
       <Portal zIndex={1000}>
         <div ref={dropdownTarget} />
       </Portal>

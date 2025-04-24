@@ -20,6 +20,7 @@ import { useDependsOnPlugins } from '../hooks/useDependsOnPlugins';
 import { GentraceInteractors } from './gentrace/GentraceInteractors';
 import { projectMetadataState } from '../state/savedGraphs';
 import { graphMetadataState } from '../state/graph';
+import { themeState } from '../state/settings';
 import { type GraphId } from '@ironclad/rivet-core';
 import { syncWrapper } from '../utils/syncWrapper';
 
@@ -138,6 +139,7 @@ export const ActionBar: FC<ActionBarProps> = ({ onRunGraph, onAbortGraph, onPaus
   const graphMetadata = useAtomValue(graphMetadataState);
   const projectMetadata = useAtomValue(projectMetadataState);
   const lastRecording = useAtomValue(lastRecordingState);
+	const theme = useAtomValue(themeState);
   const saveRecording = useSaveRecording();
 
   const graphRunning = useAtomValue(graphRunningState);
@@ -162,7 +164,7 @@ export const ActionBar: FC<ActionBarProps> = ({ onRunGraph, onAbortGraph, onPaus
   const isMainGraph = hasMainGraph && graphMetadata?.id === projectMetadata.mainGraphId;
 
   return (
-    <div css={styles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={styles}>
       {(isActuallyRemoteDebugging || (!remoteDebugger.isInternalExecutor && remoteDebugger.reconnecting)) && (
         <div
           className={clsx('remote-debugger-button active', {

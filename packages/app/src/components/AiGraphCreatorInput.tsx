@@ -1,4 +1,5 @@
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import { useState, type FC, type KeyboardEvent } from 'react';
 import TextArea from '@atlaskit/textarea';
 import { swallowPromise } from '../utils/syncWrapper';
@@ -6,10 +7,11 @@ import { useAiGraphBuilder } from '../hooks/useAiGraphBuilder';
 import { openai } from '@ironclad/rivet-core';
 import Select from '@atlaskit/select';
 import Button from '@atlaskit/button';
-import { atom, useAtom } from 'jotai';
+import { atom, useAtom, useAtomValue } from 'jotai';
 import Toggle from '@atlaskit/toggle';
 import { Label } from '@atlaskit/form';
 import { modelSelectorOptions } from '../utils/modelSelectorOptions';
+import { themeState } from '../state/settings';
 
 const styles = css`
   position: fixed;
@@ -47,15 +49,14 @@ export const showAiGraphCreatorInputState = atom(false);
 
 export const AiGraphCreatorInput: FC = () => {
   const [prompt, setPrompt] = useState<string>('');
-
   const [running, setRunning] = useState(false);
   const [feedbackItems, setFeedbackItems] = useState<string[]>([]);
   const [model, setModel] = useState<(typeof modelSelectorOptions)[number]>(modelSelectorOptions[1]);
   const [record, setRecord] = useState(true);
-
   const [show, setShow] = useAtom(showAiGraphCreatorInputState);
-
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+	const theme = useAtomValue(themeState);
 
   const buildFromPrompt = useAiGraphBuilder({
     record,
@@ -95,7 +96,7 @@ export const AiGraphCreatorInput: FC = () => {
   }
 
   return (
-    <div css={styles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={styles}>
       <div className="input-area">
         <TextArea
           isCompact

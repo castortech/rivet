@@ -13,6 +13,8 @@ import { useFuseSearch } from '../hooks/useFuseSearch.js';
 import { uniqBy } from 'lodash-es';
 import clsx from 'clsx';
 import { useMarkdown } from '../hooks/useMarkdown.js';
+import { themeState } from '../state/settings';
+import { useAtomValue } from 'jotai';
 
 const menuReferenceStyles = css`
   position: absolute;
@@ -82,6 +84,7 @@ export interface ContextMenuProps {
 
 export const ContextMenu = forwardRef<HTMLDivElement, ContextMenuProps>(
   ({ x, y, context, disabled, onMenuItemSelected }, ref) => {
+		const theme = useAtomValue(themeState);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedResultIndex, setSelectedResultIndex] = useState(0);
 
@@ -189,7 +192,7 @@ export const ContextMenu = forwardRef<HTMLDivElement, ContextMenuProps>(
         ref={anchorRef}
         css={menuReferenceStyles}
         style={{ top: y + 4, left: x - 16 }}
-        className={clsx({ disabled })}
+        className={clsx('app',  theme ? `theme-${theme}` : 'theme-default', {disabled })}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={floatingStyles} css={menuStyles} ref={refs.setFloating}>

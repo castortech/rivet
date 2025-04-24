@@ -121,7 +121,7 @@ export function useHasGitHistory() {
       return;
     }
 
-    const pathDirname = projectPath.split('/').slice(0, -1).join('/');
+   	const pathDirname = projectPath.split('/').slice(0, -1).join('/');
 
     const result = await new Command('git', ['rev-list', '--count', 'HEAD'], {
       cwd: pathDirname,

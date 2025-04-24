@@ -3,8 +3,10 @@ import { useAtomValue } from 'jotai';
 import { loadedProjectState } from '../state/savedGraphs';
 import { useGraphRevisions } from '../hooks/useGraphRevisions';
 import { css } from '@emotion/react';
+import clsx from 'clsx';
 import Button from '@atlaskit/button';
 import { type CalculatedRevision } from '../utils/ProjectRevisionCalculator';
+import { themeState } from '../state/settings';
 import { graphState, historicalGraphState, isReadOnlyGraphState } from '../state/graph';
 import { GraphId, type NodeGraph } from '@ironclad/rivet-core';
 import { useChooseHistoricalGraph } from '../hooks/useChooseHistoricalGraph';
@@ -31,7 +33,7 @@ export const revisionStyles = css`
 
   .hash {
     border-radius: 8px;
-    background-color: black;
+    background-color: var(--grey-darkish);
     display: inline-flex;
     padding: 2px 4px;
     font-size: 11px;
@@ -60,6 +62,7 @@ export const revisionStyles = css`
 
 export const GraphRevisions: FC = () => {
   const projectState = useAtomValue(loadedProjectState);
+	const theme = useAtomValue(themeState);
   const [enabled, setEnabled] = useState(false);
 
   if (!projectState.loaded || !projectState.path) {
@@ -68,24 +71,25 @@ export const GraphRevisions: FC = () => {
 
   if (!enabled) {
     return (
-      <div css={revisionStyles}>
+      <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
         <Button onClick={() => setEnabled(true)}>Show Revisions</Button>
       </div>
     );
   }
 
   return (
-    <div css={revisionStyles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
       <GraphRevisionList />
     </div>
   );
 };
 
 export const GraphRevisionList: FC = () => {
+	const theme = useAtomValue(themeState);
   const { revisions, isLoading, stop, resume, numTotalRevisions, numProcessedRevisions } = useGraphRevisions();
 
   return (
-    <div css={revisionStyles}>
+    <div className={clsx('app', theme ? `theme-${theme}` : 'theme-default')} css={revisionStyles}>
       <div className="revisions">
         {revisions.map((revision) => (
           <GraphRevisionListEntry key={revision.hash} revision={revision} />
