@@ -426,7 +426,6 @@ const RAW_RUNTIME_STATE =
           ["@types/lodash-es", "npm:4.17.12"],\
           ["@types/marked", "npm:6.0.0"],\
           ["@types/node", "npm:20.16.2"],\
-          ["@types/path-browserify", "npm:1.0.3"],\
           ["@types/react", "npm:18.2.31"],\
           ["@types/react-color", "npm:3.0.12"],\
           ["@types/react-dom", "npm:18.3.0"],\
@@ -473,7 +472,6 @@ const RAW_RUNTIME_STATE =
           ["openai", "virtual:863419c07dd8dc2bece6230acabe3ccb05127119660152dfb48c3decf6a2eb250ad0408e9249ee291a70f8799a5ae1fa8d6337a50e20aca2a794a5e253b969d8#npm:4.57.0"],\
           ["p-queue", "npm:7.4.1"],\
           ["p-retry", "npm:6.2.0"],\
-          ["path-browserify", "npm:1.0.1"],\
           ["pkg", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:5.8.1"],\
           ["pnpm", "npm:8.15.9"],\
           ["prettier", "npm:3.3.3"],\
@@ -10378,15 +10376,6 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/@types-parse5-npm-5.0.3-d544890715-e07585d323.zip/node_modules/@types/parse5/",\
         "packageDependencies": [\
           ["@types/parse5", "npm:5.0.3"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["@types/path-browserify", [\
-      ["npm:1.0.3", {\
-        "packageLocation": "./.yarn/cache/@types-path-browserify-npm-1.0.3-ad09821516-f6e77f2e0b.zip/node_modules/@types/path-browserify/",\
-        "packageDependencies": [\
-          ["@types/path-browserify", "npm:1.0.3"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -22666,15 +22655,6 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/passport-strategy-npm-1.0.0-5648a82a66-5086693f25.zip/node_modules/passport-strategy/",\
         "packageDependencies": [\
           ["passport-strategy", "npm:1.0.0"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["path-browserify", [\
-      ["npm:1.0.1", {\
-        "packageLocation": "./.yarn/cache/path-browserify-npm-1.0.1-f975d99a99-7e7368a520.zip/node_modules/path-browserify/",\
-        "packageDependencies": [\
-          ["path-browserify", "npm:1.0.1"]\
         ],\
         "linkType": "HARD"\
       }]\
