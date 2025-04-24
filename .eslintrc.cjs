@@ -37,7 +37,8 @@ module.exports = {
     },
   },
   rules: {
-    semi: ['error', 'always'],
+    // semi: ['error', 'always'],
+    semi: off,
     eqeqeq: ['error', 'smart'],
     'generator-star-spacing': 'off', // prettier handles it
     '@typescript-eslint/consistent-type-imports': [

@@ -41,7 +41,8 @@ export default [
 
     rules: {
       // Basic ESLint rules
-      semi: ['error', 'always'],
+      // semi: ['error', 'always'],
+      semi: off,
       eqeqeq: ['error', 'smart'],
       'generator-star-spacing': 'off',
       'no-async-promise-executor': 'error',
