@@ -7,7 +7,7 @@ import {
   registerBuiltInNodes,
   DebuggerDatasetProvider,
   NodeProjectReferenceLoader,
-} from '@ironclad/rivet-node';
+} from '@alpic80/rivet-node';
 import * as Rivet from '@ironclad/rivet-core';
 import { type RivetPluginInitializer } from '@ironclad/rivet-core';
 import yargs from 'yargs';
