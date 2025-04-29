@@ -23,7 +23,7 @@
       "@ironclad/rivet-core": ["../core/dist/types/index.d.ts"]
     }
   },
-  "include": ["src", "scripts", "sidecars"],
+  "include": ["src", "scripts", "sidecars", "vite.config.ts"],
   "exclude": ["**/dist", "**/node_modules"],
   "ts-node": {
     "swc": true,
