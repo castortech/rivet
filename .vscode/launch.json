@@ -26,6 +26,17 @@
 			]
 		},
 		// task for the `beforeDevCommand` if used, must be configured in `.vscode/tasks.json`
+		// "preLaunchTask": "ui:dev"
+	},
+	//this is the one to use to debug the frontend code (not the Tauri Rust code)
+	{
+		"name": "Front-end App Debug",
+		"type": "msedge",
+		"port": 9222,
+		"request": "launch",
+		"runtimeExecutable": "${workspaceFolder}/packages/app/src-tauri/target/debug/app.exe", //app in debug mode.
+		"useWebView": true,
+		"webRoot": "${workspaceFolder}/packages/app",
 		"preLaunchTask": "ui:dev"
 	},
   {
