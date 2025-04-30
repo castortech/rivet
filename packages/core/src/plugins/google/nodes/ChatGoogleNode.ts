@@ -36,13 +36,10 @@ import { getScalarTypeOf, isArrayDataValue } from '../../../model/DataValue.js';
 import type { TokenizerCallInfo } from '../../../integrations/Tokenizer.js';
 import { getInputOrData } from '../../../utils/inputs.js';
 import {
-  GoogleGenerativeAIError,
   type GoogleGenerativeAIFetchError,
   SchemaType,
   type Content,
   type FunctionDeclaration,
-  type FunctionDeclarationSchema,
-  type FunctionDeclarationsTool,
   type Part,
   type Tool,
   type FunctionCall,
@@ -356,7 +353,10 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
           }
 
           return {
-            role: message.type,
+            role: match(message.type)
+              .with('user', () => 'user')
+              .with('assistant', () => 'model')
+              .exhaustive(),
             parts,
           };
         }
@@ -645,8 +645,11 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
         },
       );
     } catch (error) {
-      context.trace(getError(error).stack ?? 'Missing stack');
-      throw new Error(`Error processing ChatGoogleNode: ${(error as Error).message}`);
+      const raisedError = getError(error);
+      context.trace(raisedError.stack ?? 'Missing stack');
+      const err = new Error(`Error processing ChatGoogleNode: ${raisedError.message}`);
+      err.cause = raisedError;
+      throw err;
     }
   },
 };

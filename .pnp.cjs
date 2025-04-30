@@ -7115,10 +7115,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@google/generative-ai", [\
-      ["npm:0.21.0", {\
-        "packageLocation": "./.yarn/cache/@google-generative-ai-npm-0.21.0-4b1f39d77c-68c4163b7a.zip/node_modules/@google/generative-ai/",\
+      ["npm:0.24.0", {\
+        "packageLocation": "./.yarn/cache/@google-generative-ai-npm-0.24.0-dfbf9dbe66-6e6a3c9f45.zip/node_modules/@google/generative-ai/",\
         "packageDependencies": [\
-          ["@google/generative-ai", "npm:0.21.0"]\
+          ["@google/generative-ai", "npm:0.24.0"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -7552,6 +7552,7 @@ const RAW_RUNTIME_STATE =
           ["semver", "npm:7.6.3"],\
           ["type-fest", "npm:4.39.1"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"]\
+          ["@google/generative-ai", "npm:0.21.0"],\
         ],\
         "linkType": "SOFT"\
       }]\
