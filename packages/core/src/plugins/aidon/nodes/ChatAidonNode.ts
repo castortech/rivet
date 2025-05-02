@@ -14,7 +14,6 @@ import {
 	type ChatNodeData,
 	type ChatMessage,
 	type GptFunction,
-	Rivet,
 	globalRivetNodeRegistry,
 	type DataValue,
 } from '../../../index.js';
@@ -25,7 +24,7 @@ import { coerceTypeOptional } from '../../../utils/coerceType.js';
 import { pluginNodeDefinition } from '../../../model/NodeDefinition.js';
 
 // Temporary
-const cache = new Map<string, Outputs>();
+// const cache = new Map<string, Outputs>();
 
 const registry = globalRivetNodeRegistry;
 
@@ -160,7 +159,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 
 		const fullUrl = schemaDetail.url + path;
 
-		const bodyContent = parsedArgs.requestBody || parsedArgs;
+		const bodyContent = parsedArgs.requestBody ?? parsedArgs;
 
 		const requestInit = {
 			method: "POST",

@@ -42,6 +42,7 @@ import graphOutputNodeImage from '../assets/node_images/graph_output_node.png';
 import raiseEventNodeImage from '../assets/node_images/raise_event_node.png';
 import readDirectoryNodeImage from '../assets/node_images/read_directory_node.png';
 import readFileNodeImage from '../assets/node_images/read_file_node.png';
+import writeFileNodeImage from '../assets/node_images/write_file_node.png';
 import setGlobalNodeImage from '../assets/node_images/set_global_node.png';
 import subgraphNodeImage from '../assets/node_images/subgraph_node.png';
 import userInputNodeImage from '../assets/node_images/user_input_node.png';
@@ -126,6 +127,7 @@ export const useBuiltInNodeImages = (): Record<BuiltInNodeType, string> => {
     raiseEvent: raiseEventNodeImage,
     readDirectory: readDirectoryNodeImage,
     readFile: readFileNodeImage,
+		writeFile: writeFileNodeImage,
     setGlobal: setGlobalNodeImage,
     subGraph: subgraphNodeImage,
     userInput: userInputNodeImage,

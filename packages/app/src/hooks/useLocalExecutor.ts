@@ -295,11 +295,11 @@ function preloadDependentDataForNode(processor: GraphProcessor, nodeId: NodeId, 
     const outputDataWithoutRefs = Object.fromEntries(
       Object.entries(outputData).map(([portId, dataValueWithRefs]) => {
         if (dataValueWithRefs.type === 'image') {
-          throw new Error('Not implemented yed');
+          throw new Error('Not implemented yet');
         } else if (dataValueWithRefs.type === 'binary') {
-          throw new Error('Not implemented yed');
+          throw new Error('Not implemented yet');
         } else if (dataValueWithRefs.type === 'audio') {
-          throw new Error('Not implemented yed');
+          throw new Error('Not implemented yet');
         } else {
           return [portId, dataValueWithRefs];
         }

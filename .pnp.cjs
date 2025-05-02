@@ -522,7 +522,7 @@ const RAW_RUNTIME_STATE =
           ["@alpic80/rivet-core", "workspace:packages/core"],\
           ["@gentrace/core", "npm:2.8.1"],\
           ["@google-cloud/vertexai", "npm:0.1.3"],\
-          ["@google/generative-ai", "npm:0.21.0"],\
+          ["@google/generative-ai", "npm:0.24.1"],\
           ["@huggingface/inference", "npm:2.8.0"],\
           ["@swc/core", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:1.7.22"],\
           ["@types/crypto-js", "npm:4.2.2"],\
@@ -7115,10 +7115,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@google/generative-ai", [\
-      ["npm:0.24.0", {\
-        "packageLocation": "./.yarn/cache/@google-generative-ai-npm-0.24.0-dfbf9dbe66-6e6a3c9f45.zip/node_modules/@google/generative-ai/",\
+      ["npm:0.24.1", {\
+        "packageLocation": "./.yarn/cache/@google-generative-ai-npm-0.24.1-d9be3495d4-992a82e2d4.zip/node_modules/@google/generative-ai/",\
         "packageDependencies": [\
-          ["@google/generative-ai", "npm:0.24.0"]\
+          ["@google/generative-ai", "npm:0.24.1"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -7552,7 +7552,6 @@ const RAW_RUNTIME_STATE =
           ["semver", "npm:7.6.3"],\
           ["type-fest", "npm:4.39.1"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"]\
-          ["@google/generative-ai", "npm:0.21.0"],\
         ],\
         "linkType": "SOFT"\
       }]\

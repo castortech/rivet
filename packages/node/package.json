@@ -2,7 +2,7 @@
   "name": "@alpic80/rivet-node",
   "license": "MIT",
   "repository": "https://github.com/ironclad/rivet",
-  "version": "1.24.0-aidon.2",
+  "version": "1.24.0-aidon.3",
   "main": "dist/cjs/bundle.cjs",
   "module": "dist/esm/index.js",
   "src": "src/index.ts",

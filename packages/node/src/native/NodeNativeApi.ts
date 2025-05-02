@@ -1,7 +1,7 @@
-import { opendir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { opendir, readdir, mkdir, readFile, writeFile, access, constants } from 'node:fs/promises';
 import { lstatSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { type BaseDir, type NativeApi, type ReadDirOptions } from '@ironclad/rivet-core';
+import { dirname, extname, basename, join, relative } from 'node:path';
+import { type BaseDir, type NativeApi, type ReadDirOptions, type Status } from '@ironclad/rivet-core';
 import { minimatch } from 'minimatch';
 
 async function* walk(dir: string): AsyncGenerator<string> {
@@ -13,6 +13,16 @@ async function* walk(dir: string): AsyncGenerator<string> {
 }
 
 export class NodeNativeApi implements NativeApi {
+	async createdir(path: string, recursive?: boolean, _baseDir?: BaseDir): Promise<Status> {
+		const recurse = recursive ?? false;
+	  try {
+			await mkdir(path, { recursive: recurse });
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
+	}
+
   async readdir(path: string, _baseDir?: BaseDir, options: ReadDirOptions = {}): Promise<string[]> {
     const {
       recursive = false,
@@ -66,9 +76,52 @@ export class NodeNativeApi implements NativeApi {
     return new Blob([result]);
   }
 
-  async writeTextFile(path: string, data: string, _baseDir?: BaseDir): Promise<void> {
-    await writeFile(path, data, 'utf-8');
+  async writeTextFile(path: string, data: string, _baseDir?: BaseDir): Promise<Status> {
+	  try {
+			await writeFile(path, data, 'utf-8');
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
   }
+
+	async writeBinaryFile(path: string, data: Uint8Array, _baseDir?: BaseDir): Promise<Status> {  //NOSONAR type is different
+	  try {
+			await writeFile(path, data, 'utf-8');
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
+	}
+
+	async exists(path: string, _baseDir?: BaseDir): Promise<boolean> {
+		try {
+			await access(path, constants.F_OK)
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	async join(...paths: string[]): Promise<string> {
+		return join(...paths);
+	}
+
+	async uniqueFilename(path: string, _baseDir?: BaseDir): Promise<string> {
+		const dir = dirname(path);
+		const ext = extname(path);
+		const base = basename(path, ext);
+
+		let candidate = path;
+		let counter = 1;
+
+		while (await this.exists(candidate)) {
+			candidate = join(dir, `${base}(${counter})${ext}`);
+			counter++;
+		}
+
+		return candidate;
+	}
 
   exec(_command: string, _args: string[], _options?: { cwd?: string | undefined } | undefined): Promise<void> {
     throw new Error('Not Implemented');

@@ -31,6 +31,9 @@ export * from './nodes/ReadDirectoryNode.js';
 import { readFileNode } from './nodes/ReadFileNode.js';
 export * from './nodes/ReadFileNode.js';
 
+import { writeFileNode } from './nodes/WriteFileNode.js';
+export * from './nodes/WriteFileNode.js';
+
 import { ifElseNode } from './nodes/IfElseNode.js';
 export * from './nodes/IfElseNode.js';
 
@@ -257,6 +260,7 @@ export const registerBuiltInNodes = (registry: NodeRegistration) => {
     .register(ifNode)
     .register(readDirectoryNode)
     .register(readFileNode)
+    .register(writeFileNode)
     .register(ifElseNode)
     .register(chunkNode)
     .register(graphInputNode)

@@ -8,6 +8,7 @@ import {
   type GraphOutputNode,
   inferType,
   DEFAULT_CHAT_NODE_TIMEOUT,
+	type Status,
 } from '@ironclad/rivet-core';
 import { cloneDeep, keyBy, mapValues, omit } from 'lodash-es';
 import {
@@ -31,18 +32,33 @@ function validateOutput(v: DataValue) {
 }
 
 export class DummyNativeApi implements NativeApi {
+	createdir(path: string, recursive?: boolean, baseDir?: BaseDir): Promise<Status> {
+		throw new Error(`Method not implemented. ${path} ${baseDir} ${recursive}`);
+	}
   readdir(path: string, baseDir?: BaseDir | undefined, options?: ReadDirOptions | undefined): Promise<string[]> {
-    throw new Error(`Method not implemented. ${path}  ${baseDir} ${options}`);
+    throw new Error(`Method not implemented. ${path} ${baseDir} ${options}`);
   }
   readTextFile(path: string, baseDir?: BaseDir | undefined): Promise<string> {
-    throw new Error(`Method not implemented. ${path}  ${baseDir}`);
+    throw new Error(`Method not implemented. ${path} ${baseDir}`);
   }
   readBinaryFile(path: string, baseDir?: BaseDir | undefined): Promise<Blob> {
-    throw new Error(`Method not implemented. ${path}  ${baseDir}`);
+    throw new Error(`Method not implemented. ${path} ${baseDir}`);
   }
-  writeTextFile(path: string, data: string, baseDir?: BaseDir | undefined): Promise<void> {
-    throw new Error(`Method not implemented. ${path}  ${baseDir} ${data}`);
+  writeTextFile(path: string, data: string, baseDir?: BaseDir | undefined): Promise<Status> {
+    throw new Error(`Method not implemented. ${path} ${baseDir} ${data}`);
   }
+	writeBinaryFile(path: string, data: Uint8Array, baseDir?: BaseDir): Promise<Status> {
+		throw new Error(`Method not implemented. ${path} ${baseDir} ${data}`);
+	}
+	exists(path: string, baseDir?: BaseDir): Promise<boolean> {
+		throw new Error(`Method not implemented. ${path} ${baseDir}`);
+	}
+	join(...paths: string[]): Promise<string> {
+		throw new Error(`Method not implemented. ${paths}`);
+	}
+	uniqueFilename(path: string, baseDir?: BaseDir): Promise<string> {
+		throw new Error(`Method not implemented. ${path} ${baseDir}`);
+	}
   exec(command: string, args: string[], options?: { cwd?: string | undefined } | undefined): Promise<void> {
     throw new Error(`Method not implemented. ${command}  ${args} ${options}`);
   }

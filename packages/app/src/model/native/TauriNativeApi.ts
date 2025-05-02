@@ -1,5 +1,6 @@
-import { readDir, BaseDirectory, readTextFile, readBinaryFile, writeFile, type FileEntry } from '@tauri-apps/api/fs';
-import { type BaseDir, type NativeApi, type ReadDirOptions } from '@ironclad/rivet-core';
+import { readDir, BaseDirectory, readTextFile, readBinaryFile, writeFile, writeBinaryFile, type FileEntry, createDir, exists } from '@tauri-apps/api/fs';
+import { basename, dirname, extname, join } from '@tauri-apps/api/path'
+import { type Status, type BaseDir, type NativeApi, type ReadDirOptions } from '@ironclad/rivet-core';
 
 import { minimatch } from 'minimatch';
 
@@ -34,6 +35,16 @@ const baseDirToBaseDirectory = (baseDir?: string): BaseDirectory | undefined =>
   baseDir ? baseDirToBaseDirectoryMap[baseDir as BaseDir] : undefined;
 
 export class TauriNativeApi implements NativeApi {
+	async createdir(path: string, recursive?: boolean, baseDir?: BaseDir): Promise<Status> {
+	  try {
+			const baseDirectory = baseDirToBaseDirectory(baseDir);
+			await createDir(path, { dir: baseDirectory, recursive });
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
+	}
+
   async readdir(path: string, baseDir?: BaseDir, options: ReadDirOptions = {}): Promise<string[]> {
     const { recursive = false, includeDirectories = false, filterGlobs = [], relative = false, ignores = [] } = options;
 
@@ -79,10 +90,52 @@ export class TauriNativeApi implements NativeApi {
     return new Blob([result]);
   }
 
-  async writeTextFile(path: string, data: string, baseDir?: BaseDir): Promise<void> {
-    const baseDirectory = baseDirToBaseDirectory(baseDir);
-    await writeFile(path, data, { dir: baseDirectory });
+  async writeTextFile(path: string, data: string, baseDir?: BaseDir): Promise<Status> {
+	  try {
+			const baseDirectory = baseDirToBaseDirectory(baseDir);
+			await writeFile(path, data, { dir: baseDirectory });
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
   }
+
+  async writeBinaryFile(path: string, data: Uint8Array, baseDir?: BaseDir): Promise<Status> {
+	  try {
+  	  const baseDirectory = baseDirToBaseDirectory(baseDir);
+    	await writeBinaryFile(path, data, { dir: baseDirectory });
+			return { success: true }
+		} catch (error) {
+			return { success: false, error }
+		}
+  }
+
+	async exists(path: string, baseDir?: BaseDir): Promise<boolean> {
+	  const baseDirectory = baseDirToBaseDirectory(baseDir);
+		return exists(path, { dir: baseDirectory });
+	}
+
+	async join(...paths: string[]): Promise<string> {
+		return await join(...paths);
+	}
+
+	async uniqueFilename(path: string, baseDir?: BaseDir): Promise<string> {
+	  const baseDirectory = baseDirToBaseDirectory(baseDir);
+		const dir = await dirname(path)
+  	const rawExt = await extname(path)
+  	const ext = rawExt ? `.${rawExt}` : ''
+  	const base = await basename(path, ext)
+
+		let candidate = path;
+		let counter = 1;
+
+		while (await exists(candidate, { dir: baseDirectory })) {
+			candidate = await join(dir, `${base}(${counter})${ext}`);
+			counter++;
+		}
+
+		return candidate;
+	}
 
   async exec(command: string, args: string[], options?: { cwd?: string | undefined } | undefined): Promise<void> {
     throw new Error('Method not implemented.');
