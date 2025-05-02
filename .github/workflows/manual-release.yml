@@ -5,6 +5,8 @@ on: workflow_dispatch
 jobs:
   build-release:
     runs-on: ${{ matrix.platform }}
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     strategy:
       matrix:
 #        platform: [windows-latest, macos-latest, ubuntu-22.04]
