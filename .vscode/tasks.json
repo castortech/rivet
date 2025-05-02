@@ -9,6 +9,12 @@
       "args": [
         "dev"
       ],
-    },
+      "options": {
+        "env": {
+          "NPM_TOKEN": "${env:NPM_TOKEN}"
+        }
+      },
+			"problemMatcher": []
+		},
   ]
 }
