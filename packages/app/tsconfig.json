@@ -20,7 +20,7 @@
     "composite": true,
 		"baseUrl": ".",
     "paths": {
-      "@ironclad/rivet-core": ["../core/dist/types/index.d.ts"]
+      "@alpic80/rivet-core": ["../core/dist/types/index.d.ts"]
     }
   },
   "include": ["src", "scripts", "sidecars", "vite.config.ts"],
