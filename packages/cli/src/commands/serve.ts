@@ -217,6 +217,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 
 		if (args.logActivity) {
 			const logInfo = [
+				args.hostname && `Hostname:${chalk.bold.white(args.hostname)}`,
 				args.port && `Port:${chalk.bold.white(args.port)}`,
 				args.projectFile && `ProjectFile:${chalk.bold.white(args.projectFile)}`,
 				args.dev && `Dev:${chalk.bold.white(args.dev)}`,
