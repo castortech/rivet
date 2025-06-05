@@ -1,9 +1,11 @@
-FROM node:24.1.0-alpine3.21
+FROM node:24.1.0-alpine
 
 WORKDIR /app
 VOLUME /project
 
-RUN npm install -g @alpic80/rivet-cli@1.24.0-aidon.5
+ARG NPM_TOKEN
+
+RUN npm install -g @alpic80/rivet-cli@1.24.0-aidon.6
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh

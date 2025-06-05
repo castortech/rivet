@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@alpic80/rivet-core": "workspace:^",
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.0-aidon.3",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.0-aidon.4",
     "emittery": "^1.0.1",
     "emittery-0-13": "npm:emittery@^0.13.1",
     "lodash": "^4.17.21",
