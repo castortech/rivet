@@ -34,6 +34,11 @@ type StreamFlags = {
 
 export function makeCommand<T>(y: yargs.Argv<T>) {
   return y
+    .option('hostname', {
+      describe: 'The hostname to serve on',
+      type: 'string',
+      demandOption: false,
+    })
     .option('port', {
       describe: 'The port to serve on',
       type: 'number',
@@ -132,6 +137,7 @@ const conditionalLogger = () => {
 }
 
 type ServerContext = {
+  hostname: string | undefined;
   port: number;
   projectFile: string | undefined;
   dev: boolean;
@@ -166,6 +172,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 		const pluginSettings = await setupPlugins(Rivet as RivetType);
 
 		const args: ServerContext = {
+			hostname: cliArgs.hostname ?? process.env.HOSTNAME ?? '127.0.0.1',
 			port: Number(cliArgs.port ?? process.env.PORT ?? 3000),
 			projectFile: cliArgs.projectFile ?? process.env.PROJECT_FILE,
 			dev: cliArgs.dev ?? process.env.NODE_ENV === 'development',
@@ -275,6 +282,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 
     const server = serveHono({
       port: args.port,
+			hostname: args.hostname,
       fetch: app.fetch,
     });
 
