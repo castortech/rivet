@@ -2,7 +2,7 @@
   "name": "@alpic80/rivet-cli",
   "license": "MIT",
   "repository": "https://github.com/castortech/rivet",
-  "version": "1.24.0-aidon.6",
+  "version": "1.24.0-aidon.7",
   "src": "bin/cli.ts",
   "bin": {
     "rivet": "bin/cli.js"
