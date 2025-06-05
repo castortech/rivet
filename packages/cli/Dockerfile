@@ -5,7 +5,7 @@ VOLUME /project
 
 ARG NPM_TOKEN
 
-RUN npm install -g @alpic80/rivet-cli@1.24.0-aidon.8
+RUN npm install -g @alpic80/rivet-cli@1.24.0-aidon.9
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
