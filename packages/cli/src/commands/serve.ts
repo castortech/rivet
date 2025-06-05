@@ -215,6 +215,8 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			throwIfInvalidGraph(initialProject, args.graph);
 		}
 
+		console.log(chalk.green('Server running version 10'));
+
 		if (args.logActivity) {
 			const logInfo = [
 				args.hostname && `Hostname:${chalk.bold.white(args.hostname)}`,
