@@ -37,7 +37,7 @@ The basic usage will serve the project file in the current directory, using the 
 npx @ironclad/rivet-cli serve
 ```
 
-You can also specify a different project file or port:
+You can also specify a different project file (which can also be specified via environment variable `PROJECT_FILE`) or port:
 
 ```bash
 npx @ironclad/rivet-cli serve my-project.rivet-project --port 8080
@@ -104,27 +104,81 @@ The request body should contain the input values as described above.
 
 Outputs a JSON object with the output values of the graph.
 
+### `POST/path/to/projectfile::[graphId]`
+
+This is only enabled if the `--projects-root-dir` flag is used. This endpoint runs a specific project file and optionally a specific graph in that project file.
+
+The request body should contain the input values as described above.
+
+Outputs a JSON object with the output values of the graph.
+
 ## Options
+
+### Passing in options
+
+Options can be part of the serve command line or supplied via environment or supplied in a request via a special input called 'runParams'.
+
+All options can be passed in via the command line and most options that are not required to start the server can be passed in via environment
+and those that affect an execution can be passed in via the 'runParams' input.
+
+Options are first taken from the command line, then the environment and finally the 'runParams' input.
 
 ### Server Configuration
 
-- `--port <port>`: The port to run the server on. Default is 3000.
+- `--port <port>`: The port to run the server on. Default is 3000. Environment: `PORT`, RunParams: N/A.
 - `--dev`: Runs the server in development mode, which will reread the project file on each request. Useful for development.
+					Environment NODE_ENV === 'development', RunParams: N/A.
 
 ### Graph Selection
 
-- `--graph <graphNameOrId>`: The name or ID of the graph to run. If not provided, the main graph will be run. If there is no main graph, an error will be returned.
+- `--graph <graphNameOrId>`: The name or ID of the graph to run. If not provided, the main graph will be run.
+															If there is no main graph, an error will be returned. Environment: `GRAPH`, RunParams: N/A.
 - `--allow-specifying-graph-id`: Allows specifying the graph ID in the URL path. This is disabled by default.
+															Environment: `ALLOW_SPECIFYING_GRAPH_ID`, RunParams: N/A.
+- `--projects-root-dir`: Specifies the root directory where project files are located.
+			If specified, a projectFile argument will be a relative path to this directory. Environment: `PROJECTS_ROOT_DIR`, RunParams: N/A.
 
 ### OpenAI Configuration
 
-- `--openai-api-key`: The OpenAI API key to use for the Chat node. Required if the project uses OpenAI functionality or otherwise requires an API key. If omitted, the environment variable `OPENAI_API_KEY` will be used.
-- `--openai-endpoint`: The OpenAI API endpoint to use for the Chat node. Default is `https://api.openai.com/v1/chat/completions`. If omitted, the environment variable `OPENAI_ENDPOINT` will be used.
-- `--openai-organization`: The OpenAI organization ID to use. If omitted, the environment variable `OPENAI_ORGANIZATION` will be used.
+- `--openai-api-key`: The OpenAI API key to use for the Chat node. Required if the project uses OpenAI functionality or otherwise requires an API key.
+											Environment: `OPENAI_API_KEY`, RunParams: `openaiApiKey`.
+- `--openai-endpoint`: The OpenAI API endpoint to use for the Chat node. Default is `https://api.openai.com/v1/chat/completions`.
+											Environment: `OPENAI_ENDPOINT`, RunParams: `openaiEndpoint`.
+- `--openai-organization`: The OpenAI organization ID to use. Environment: `OPENAI_ORGANIZATION`, RunParams: `openaiOrganization`.
+
+### Streaming
+
+Here are the options for streaming, please see the section [Streaming Mode](#streaming-mode) for more information.
+
+- `--stream`: Activates streaming mode. Can also be used with argument to specify nodes and events to stream. Disabled by default.
+							Environment: `STREAM` (note that it should be an empty string), RunParams: `stream`.
+- `--stream-node`: When streaming mode is active, provide streaming text from a specified chat node. Disabled by default.
+							Environment: `STREAM_NODE`, RunParams: `streamNode`.
 
 ### Monitoring
 
+Here are the options for monitoring, please see the section [Monitoring Info](#monitoring-info) for more information.
+
 - `--expose-cost`: Exposes the graph run cost as a property in the JSON response object. Disabled by default.
+									Environment: `EXPOSE_COST`, RunParams: `exposeCost`.
+- `--expose-usage`: Exposes the graph token counts and chat usage detail as a property in the JSON response object. Disabled by default.
+					Environment `EXPOSE_USAGE`, RunParams: `exposeUsage`.
+
+### Logging
+
+- `--log-requests`: Determines if all requests (except health checks) will be logged via Hono logger. Disabled by default.
+						Environment: `LOG_REQUESTS`, RunParams: N/A.
+- `--log-activity`: Determines if basic activity should be logged during processing. Disabled by default.
+						Environment: `LOG_ACTIVITY`, RunParams: N/A.
+- `--log-trace`: Determines if includeTrace should be turned on during graph processing. Disabled by default.
+						Environment: `LOG_TRACE`, RunParams: `logTrace`.
+
+## Plugins
+
+The server also supports being configured to run with any plugin that can be installed in the application. Plugins are activated and configured via
+environment variables. A full list of the plugins and their available variables is displayed upon server startup.
+
+Plugins are activated via `NAME_PLUGIN = true`
 
 ## Examples
 
@@ -168,12 +222,12 @@ stream events in the SSE (Server-Sent Events) format, which is a simple and effi
 
 ### Rivet Events Streaming Mode
 
-By default, when `--stream` is provided, the server will stream events in the Rivet Events format. This format is designed for application that
-understand the Rivet Events system, and can handle the events appropriately.
+By default, when `--stream` is provided without any value, the server will stream ALL events in the Rivet Events format.
+This format is designed for application that understand the Rivet Events system, and can handle the events appropriately.
 
 Here is an example of streamed responses in Rivet Events format:
 
-```
+```json
 event: nodeStart
 data: {
     "inputs": {
@@ -307,14 +361,27 @@ data: {
 You can see that the server is streaming events like `nodeStart`, `partialOutputs`, and `nodeFinish`. The data for each of the events is
 a JSON object with the relevant information for that event.
 
-#### Single-Node Streaming Mode
+#### Selective Streaming Mode
 
-If you set `--stream=NodeId` or `--stream=NodeTitle`, the server will only stream events for the specified node. This is useful if you are only interested in the
-events for a specific node in the graph.
+If you pass an argument value to the `stream` option, you can control which node or nodes are streamed and the type of events to stream.
+This is useful if you are only interested in the events for specific nodes in the graph or just some event types.
+
+First, nodes are identified by either their Id or Title.
+
+The argument to stream takes a comma-separated list of node with an optional event type selector.
+
+Each node in the list is of the form: `<NodeId/NodeTitle>[SFD]` where the first part is the node id or title followed by an optional type selector,
+which uses an event list enclosed in square bracket. The valid values are `S`tart, `F`inish and `D`elta (partial output).
+
+As an exmple we could have: `chat[FD],output[F]` to stream delta and finish event from the chat node and also to stream the finish even on the output node.
+This gives you full flexibility to target exactly the content that you care about.
+
 
 ### Text Streaming Mode
 
-If you are integrating with a simple application that only likes having text responses, you can set `--stream-node=NodeId` / `--stream-node=NodeTitle` and `--stream` together.
+If you are integrating with a simple application that only likes having text responses, you can set `--stream-node=<ChatNodeId>` / `--stream-node=<ChatNodeTitle>` and `--stream` together.
+
+You should only specify Chat nodes for this mode, as other nodes like Graph Output nodes may not have partial outputs that support this.
 
 This will cause the streaming to look like the following:
 
@@ -340,4 +407,96 @@ data: " This will help me assist you better!"
 
 You can see that each `data` event contains a delta of the response text from the node.
 
-You should only specify Chat nodes for this mode, as other nodes may not have partial outputs that support this.
+## Monitoring Info
+
+There are two monitoring options, expose cost and expose usage. Their behavior is dependant on the execution mode that you are using.
+If not configured this information will be omitted.
+
+The `--expose-cost` controls the `cost` object and the `--expose-usage` controls the `requestTokens`, `responseTokens` and `usages` objects.
+
+The `usages` object is an array of `usage` object returned by the LLM. It will collect all such `usage` objects as emitted by graph.
+
+### Run Graph Mode
+
+In non-streaming mode, you are receiving a single response called the `GraphOutputs` that can include both a `cost` section and
+the token counts under `requestTokens` and `responseTokens`. There will not be any `usage` content usually coming from the chat node.
+
+#### Example
+
+```json
+{
+	"output": {
+		"type": "string",
+		"value": "I am an artificial intelligence language model developed by OpenAI, ..."
+	},
+	"requestTokens": {
+		"type": "number",
+		"value": 16
+	},
+	"responseTokens": {
+		"type": "number",
+		"value": 981
+	},
+	"cost": {
+		"type": "number",
+		"value": 0.00041865000000000007
+	}
+}
+```
+
+### Stream Mode
+
+In pure stream mode, it will put the monitoring content in the `done` event with the `graphOutput` object.
+
+#### Example
+
+Request:
+```json
+{ "input": "What do you do, explain in details?", "runParams" : { "exposeCost":true, "exposeUsage":true, "stream":"chat[D]" }}'
+```
+Response:
+```json
+event: partialOutput
+data: {"type":"partialOutput","nodeId":"N5YyV-zlVYCi6iuodTSwQ","nodeTitle":"chat","delta":""}
+...
+event: partialOutput
+data: {"type":"partialOutput","nodeId":"N5YyV-zlVYCi6iuodTSwQ","nodeTitle":"chat","delta":" contexts."}
+
+event: done
+data: {"type":"done","graphOutput":{"requestTokens":{"type":"number","value":16},"responseTokens":{"type":"number","value":1100},"cost":{"type":"number","value":0.00046665},"usages":{"type":"any[]","value":[{"type":"object","value":{"prompt_tokens":16,"completion_tokens":619,"total_tokens":635,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":0,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0},"prompt_cost":0.0000024,"completion_cost":0.00046425,"total_cost":0.00046665}}]}}}
+```
+
+### Text Streaming Mode
+
+In text streaming mode, selecting to include monitoring info (both cost and usage), will cause a `graphOutput` final stream event as shown:
+
+#### Example
+
+```json
+data: ""
+
+...
+
+data: " This will help me assist you better!"
+
+graphOutput: {
+	"requestTokens": { "type": "number", "value": 16 },
+	"responseTokens": { "type": "number", "value": 1093 },
+	"cost": { "type": "number", "value": 0.00047865 },
+	"usages": { "type": "any[]", "value": [
+		{
+			"type": "object",
+			"value": {
+				"prompt_tokens": 16,
+				"completion_tokens": 635,
+				"total_tokens": 651,
+				"prompt_tokens_details": { "cached_tokens": 0, "audio_tokens": 0 },
+				"completion_tokens_details": { "reasoning_tokens": 0, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0	},
+				"prompt_cost": 0.0000024,
+				"completion_cost": 0.00047625,
+				"total_cost": 0.00047865
+			}
+		}
+	]}
+}
+```

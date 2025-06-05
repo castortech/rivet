@@ -1,9 +1,9 @@
-FROM node:23.7.0-alpine3.21
+FROM node:24.1.0-alpine3.21
 
 WORKDIR /app
 VOLUME /project
 
-RUN npm install -g @ironclad/rivet-cli@1.24.0-beta.5
+RUN npm install -g @alpic80/rivet-cli@1.24.0-aidon.5
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh

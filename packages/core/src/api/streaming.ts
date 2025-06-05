@@ -5,6 +5,8 @@ import {
   type GraphOutputs,
   type GraphProcessor,
   type PortId,
+	type ArrayDataValue,
+	type AnyDataValue,
 } from '../index.js';
 import { coerceType } from '../utils/coerceType.js';
 
@@ -17,6 +19,15 @@ export type RivetEventStreamFilterSpec = {
 
   /** If the graph errors, send an error event? */
   error?: boolean;
+
+	/** Expose the cost of the graph run in the response */
+  exposeCost?: boolean;
+
+	/** Expose the token usage of the graph run in the response */
+  exposeUsage?: boolean;
+
+	/** Whether to remove the final output when done is true */
+  removeFinalOutput?: boolean;
 
   /** Stream node start events for the specified node IDs or node titles. */
   nodeStart?: string[] | true;
@@ -67,6 +78,7 @@ export async function* getProcessorEvents(
   spec: RivetEventStreamFilterSpec,
 ): AsyncGenerator<RivetEventStreamEventInfo, void> {
   const previousIndexes = new Map<NodeId, number>();
+	const usages: unknown[] = [];
 
   for await (const event of processor.events()) {
     if (event.type === 'partialOutput') {
@@ -90,9 +102,28 @@ export async function* getProcessorEvents(
       }
     } else if (event.type === 'done') {
       if (spec.done) {
+				const results = event.results;
+				if (!spec.exposeCost) {
+					delete results.cost;
+				}
+				if (!spec.exposeUsage) {
+					delete results.requestTokens;
+					delete results.responseTokens;
+				}
+				else if (usages.length) {
+					const usageOutput: ArrayDataValue<AnyDataValue> = {
+						type: 'any[]',
+						value: usages
+					}
+					results['usages'] = usageOutput;
+				}
+				if (spec.removeFinalOutput) {
+					delete results.output;
+				}
+
         yield {
           type: 'done',
-          graphOutput: event.results,
+          graphOutput: results,
         };
       }
     } else if (event.type === 'error') {
@@ -116,6 +147,13 @@ export async function* getProcessorEvents(
         };
       }
     } else if (event.type === 'nodeFinish') {
+			if (spec.exposeUsage) {
+				const usage = event.outputs['usage' as PortId];
+				if (usage !== undefined) {
+					usages.push(usage);
+				}
+			}
+
       if (
         spec.nodeFinish === true ||
         spec.nodeFinish?.includes(event.node.id) ||
@@ -170,22 +208,51 @@ export function getProcessorSSEStream(
   });
 }
 
-export function getSingleNodeStream(processor: GraphProcessor, nodeIdOrTitle: string) {
+export function getSingleNodeStream(processor: GraphProcessor, nodeIdOrTitle: string): ReadableStream<string>
+export function getSingleNodeStream(processor: GraphProcessor, spec: RivetEventStreamFilterSpec): ReadableStream<string>
+
+export function getSingleNodeStream(processor: GraphProcessor, arg: RivetEventStreamFilterSpec | string) {
+	let spec;
+	if (typeof arg === 'string') {
+		const nodeIdOrTitle = arg;
+		spec = {
+			partialOutputs: [nodeIdOrTitle],
+			nodeFinish: [nodeIdOrTitle],
+		};
+	}
+	else {
+		spec = arg;
+	}
+
   return new ReadableStream<string>({
     async start(controller) {
       try {
-        for await (const event of getProcessorEvents(processor, {
-          partialOutputs: [nodeIdOrTitle],
-          nodeFinish: [nodeIdOrTitle],
-        })) {
-          if (event.type === 'partialOutput' && (event.nodeId === nodeIdOrTitle || event.nodeTitle === nodeIdOrTitle)) {
+        for await (const event of getProcessorEvents(processor, spec)) {
+          if (event.type === 'partialOutput') {  //nodeIdOrTitle filter managed by spec
             controller.enqueue(`data: ${JSON.stringify(event.delta)}\n\n`);
-          } else if (
-            event.type === 'nodeFinish' &&
-            (event.nodeId === nodeIdOrTitle || event.nodeTitle === nodeIdOrTitle)
-          ) {
-            controller.close();
           }
+					else if (event.type === 'error') {
+						controller.enqueue(`error: ${JSON.stringify(event.error)}\n\n`);
+					}
+					else if (event.type === 'done') {
+						if (spec.done) {
+							const results = event.graphOutput;
+							if (!spec.exposeCost) {
+								delete results.cost;
+							}
+							if (!spec.exposeUsage) {
+								delete results.requestTokens;
+								delete results.responseTokens;
+								delete results.usages;
+							}
+							if (spec.removeFinalOutput) {
+								delete results.output;
+							}
+
+							controller.enqueue(`graphOutput: ${JSON.stringify(results)}\n\n`);
+						}
+            controller.close();
+					}
         }
 
         controller.close();

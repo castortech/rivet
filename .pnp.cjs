@@ -23,7 +23,7 @@ const RAW_RUNTIME_STATE =
       "reference": "workspace:packages/app-executor"\
     },\
     {\
-      "name": "@ironclad/rivet-cli",\
+      "name": "@alpic80/rivet-cli",\
       "reference": "workspace:packages/cli"\
     },\
     {\
@@ -51,11 +51,11 @@ const RAW_RUNTIME_STATE =
   "ignorePatternData": "(^(?:\\\\.yarn\\\\/sdks(?:\\\\/(?!\\\\.{1,2}(?:\\\\/|$))(?:(?:(?!(?:^|\\\\/)\\\\.{1,2}(?:\\\\/|$)).)*?)|$))$)",\
   "fallbackExclusionList": [\
     ["@alpic80/rivet-app", ["workspace:packages/app"]],\
+    ["@alpic80/rivet-cli", ["workspace:packages/cli"]],\
     ["@alpic80/rivet-core", ["workspace:packages/core"]],\
     ["@alpic80/rivet-node", ["workspace:packages/node"]],\
     ["@ironclad/rivet", ["workspace:."]],\
     ["@ironclad/rivet-app-executor", ["workspace:packages/app-executor"]],\
-    ["@ironclad/rivet-cli", ["workspace:packages/cli"]],\
     ["@ironclad/rivet-community", ["workspace:packages/community"]],\
     ["@ironclad/trivet", ["workspace:packages/trivet"]],\
     ["docs", ["workspace:packages/docs"]]\
@@ -91,7 +91,7 @@ const RAW_RUNTIME_STATE =
           ["prettier", "npm:3.3.3"],\
           ["rollup", "npm:4.39.0"],\
           ["ts-node", "virtual:4a4dfdd9a7df5ec5e275841a43fbecdb97f28d7f31447ab74c1dd2a4d56fe264664aa1dc4ad44cc92e46e533864e6b71f8d1474657f30ffd4d572a69c55bcf0b#npm:10.9.2"],\
-          ["tsx", "npm:4.19.1"],\
+          ["tsx", "npm:4.19.4"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["yargs", "npm:17.7.2"],\
           ["zx", "npm:8.1.9"]\
@@ -515,6 +515,41 @@ const RAW_RUNTIME_STATE =
         "linkType": "SOFT"\
       }]\
     ]],\
+    ["@alpic80/rivet-cli", [\
+      ["workspace:packages/cli", {\
+        "packageLocation": "./packages/cli/",\
+        "packageDependencies": [\
+          ["@alpic80/rivet-cli", "workspace:packages/cli"],\
+          ["@alpic80/rivet-core", "workspace:packages/core"],\
+          ["@alpic80/rivet-node", "workspace:packages/node"],\
+          ["@hono/node-server", "virtual:050c11d70e2c7bc706b29de010324081826ff53a8086548ba6c17e1bad530056ae8df79fd446b8c629d4149974c794c8b7d25392254391d21749646da0c7c175#npm:1.14.0"],\
+          ["@ironclad/rivet-core", [\
+            "@alpic80/rivet-core",\
+            "workspace:packages/core"\
+          ]],\
+          ["@ironclad/rivet-node", [\
+            "@alpic80/rivet-node",\
+            "workspace:packages/node"\
+          ]],\
+          ["@types/dotenv", "npm:8.2.3"],\
+          ["@types/yargs", "npm:17.0.33"],\
+          ["@typescript-eslint/eslint-plugin", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:8.29.0"],\
+          ["chalk", "npm:5.4.1"],\
+          ["didyoumean2", "npm:7.0.4"],\
+          ["dotenv", "npm:16.4.7"],\
+          ["eslint", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:9.24.0"],\
+          ["eslint-config-standard-with-typescript", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:39.1.1"],\
+          ["eslint-plugin-import", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:2.31.0"],\
+          ["eslint-plugin-n", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:16.6.2"],\
+          ["eslint-plugin-promise", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:6.6.0"],\
+          ["hono", "npm:4.7.5"],\
+          ["tsx", "npm:4.19.0"],\
+          ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
+          ["yargs", "npm:17.7.2"]\
+        ],\
+        "linkType": "SOFT"\
+      }]\
+    ]],\
     ["@alpic80/rivet-core", [\
       ["workspace:packages/core", {\
         "packageLocation": "./packages/core/",\
@@ -524,6 +559,10 @@ const RAW_RUNTIME_STATE =
           ["@google-cloud/vertexai", "npm:0.1.3"],\
           ["@google/generative-ai", "npm:0.24.1"],\
           ["@huggingface/inference", "npm:2.8.0"],\
+          ["@ironclad/rivet-core", [\
+            "@alpic80/rivet-core",\
+            "workspace:packages/core"\
+          ]],\
           ["@swc/core", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:1.7.22"],\
           ["@types/crypto-js", "npm:4.2.2"],\
           ["@types/eslint", "npm:8.56.12"],\
@@ -587,6 +626,10 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@alpic80/rivet-core", "workspace:packages/core"],\
           ["@alpic80/rivet-node", "workspace:packages/node"],\
+          ["@ironclad/rivet-core", [\
+            "@alpic80/rivet-core",\
+            "workspace:packages/core"\
+          ]],\
           ["@swc/core", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:1.7.22"],\
           ["@types/eslint", "npm:8.56.12"],\
           ["@types/lodash", "npm:4.17.7"],\
@@ -7150,10 +7193,10 @@ const RAW_RUNTIME_STATE =
         ],\
         "linkType": "SOFT"\
       }],\
-      ["virtual:bbd91125264a56425cb84647dbdb3897ebf3aa2cdf8c02bff68076c228ddd912fb3bb6659c03fbe9e3e3898d8847f372ce79bb07d1395c306ae5ef774f9a7fa3#npm:1.14.0", {\
-        "packageLocation": "./.yarn/__virtual__/@hono-node-server-virtual-cbc6309f7f/0/cache/@hono-node-server-npm-1.14.0-ab289a612d-9b82f0e029.zip/node_modules/@hono/node-server/",\
+      ["virtual:050c11d70e2c7bc706b29de010324081826ff53a8086548ba6c17e1bad530056ae8df79fd446b8c629d4149974c794c8b7d25392254391d21749646da0c7c175#npm:1.14.0", {\
+        "packageLocation": "./.yarn/__virtual__/@hono-node-server-virtual-b8a84b87fc/0/cache/@hono-node-server-npm-1.14.0-ab289a612d-9b82f0e029.zip/node_modules/@hono/node-server/",\
         "packageDependencies": [\
-          ["@hono/node-server", "virtual:bbd91125264a56425cb84647dbdb3897ebf3aa2cdf8c02bff68076c228ddd912fb3bb6659c03fbe9e3e3898d8847f372ce79bb07d1395c306ae5ef774f9a7fa3#npm:1.14.0"],\
+          ["@hono/node-server", "virtual:050c11d70e2c7bc706b29de010324081826ff53a8086548ba6c17e1bad530056ae8df79fd446b8c629d4149974c794c8b7d25392254391d21749646da0c7c175#npm:1.14.0"],\
           ["@types/hono", null],\
           ["hono", "npm:4.7.5"]\
         ],\
@@ -7458,7 +7501,7 @@ const RAW_RUNTIME_STATE =
           ["prettier", "npm:3.3.3"],\
           ["rollup", "npm:4.39.0"],\
           ["ts-node", "virtual:4a4dfdd9a7df5ec5e275841a43fbecdb97f28d7f31447ab74c1dd2a4d56fe264664aa1dc4ad44cc92e46e533864e6b71f8d1474657f30ffd4d572a69c55bcf0b#npm:10.9.2"],\
-          ["tsx", "npm:4.19.1"],\
+          ["tsx", "npm:4.19.4"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["yargs", "npm:17.7.2"],\
           ["zx", "npm:8.1.9"]\
@@ -7490,32 +7533,6 @@ const RAW_RUNTIME_STATE =
           ["ts-pattern", "npm:5.7.0"],\
           ["tsx", "npm:4.19.0"],\
           ["type-fest", "npm:4.39.1"],\
-          ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
-          ["yargs", "npm:17.7.2"]\
-        ],\
-        "linkType": "SOFT"\
-      }]\
-    ]],\
-    ["@ironclad/rivet-cli", [\
-      ["workspace:packages/cli", {\
-        "packageLocation": "./packages/cli/",\
-        "packageDependencies": [\
-          ["@alpic80/rivet-node", "workspace:packages/node"],\
-          ["@hono/node-server", "virtual:bbd91125264a56425cb84647dbdb3897ebf3aa2cdf8c02bff68076c228ddd912fb3bb6659c03fbe9e3e3898d8847f372ce79bb07d1395c306ae5ef774f9a7fa3#npm:1.14.0"],\
-          ["@ironclad/rivet-cli", "workspace:packages/cli"],\
-          ["@types/dotenv", "npm:8.2.3"],\
-          ["@types/yargs", "npm:17.0.33"],\
-          ["@typescript-eslint/eslint-plugin", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:8.29.0"],\
-          ["chalk", "npm:5.4.1"],\
-          ["didyoumean2", "npm:7.0.4"],\
-          ["dotenv", "npm:16.4.7"],\
-          ["eslint", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:9.24.0"],\
-          ["eslint-config-standard-with-typescript", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:39.1.1"],\
-          ["eslint-plugin-import", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:2.31.0"],\
-          ["eslint-plugin-n", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:16.6.2"],\
-          ["eslint-plugin-promise", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:6.6.0"],\
-          ["hono", "npm:4.7.5"],\
-          ["tsx", "npm:4.19.0"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["yargs", "npm:17.7.2"]\
         ],\
@@ -27738,16 +27755,6 @@ const RAW_RUNTIME_STATE =
         ],\
         "linkType": "HARD"\
       }],\
-      ["npm:4.19.1", {\
-        "packageLocation": "./.yarn/cache/tsx-npm-4.19.1-aace436c49-1f5f0b7c41.zip/node_modules/tsx/",\
-        "packageDependencies": [\
-          ["esbuild", "npm:0.19.5"],\
-          ["fsevents", "patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"],\
-          ["get-tsconfig", "npm:4.8.0"],\
-          ["tsx", "npm:4.19.1"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:4.19.3", {\
         "packageLocation": "./.yarn/cache/tsx-npm-4.19.3-fb1194d166-a7e7f41e55.zip/node_modules/tsx/",\
         "packageDependencies": [\
@@ -27755,6 +27762,16 @@ const RAW_RUNTIME_STATE =
           ["fsevents", "patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"],\
           ["get-tsconfig", "npm:4.8.0"],\
           ["tsx", "npm:4.19.3"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:4.19.4", {\
+        "packageLocation": "./.yarn/cache/tsx-npm-4.19.4-1351949fb3-4dde315aed.zip/node_modules/tsx/",\
+        "packageDependencies": [\
+          ["esbuild", "npm:0.19.5"],\
+          ["fsevents", "patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"],\
+          ["get-tsconfig", "npm:4.8.0"],\
+          ["tsx", "npm:4.19.4"]\
         ],\
         "linkType": "HARD"\
       }]\

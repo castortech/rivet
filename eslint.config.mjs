@@ -6,6 +6,7 @@ import importPlugin from 'eslint-plugin-import';
 export default [
   {
     files: ['**/*.{js,jsx,ts,tsx,mts,cts}'],
+		ignores: ['.vscode/module-alias.js'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

@@ -1,6 +1,7 @@
 {
  "version": "0.2.0",
  "configurations": [
+
   {
    "type": "node",
    "request": "launch",
@@ -61,6 +62,13 @@
    "console": "integratedTerminal",
    "internalConsoleOptions": "neverOpen",
    "skipFiles": ["<node_internals>/**"]
-  }
+  },
+	{
+		"type": "node",
+		"request": "attach",
+		"name": "Attach to CLI",
+		"port": 9229,
+		"protocol": "inspector"
+	}
  ]
 }

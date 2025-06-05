@@ -1,8 +1,8 @@
 {
-  "name": "@ironclad/rivet-cli",
+  "name": "@alpic80/rivet-cli",
   "license": "MIT",
-  "repository": "https://github.com/ironclad/rivet",
-  "version": "1.24.0-beta.5",
+  "repository": "https://github.com/castortech/rivet",
+  "version": "1.24.0-aidon.5",
   "src": "bin/cli.ts",
   "bin": {
     "rivet": "bin/cli.js"
@@ -20,11 +20,15 @@
     "docker-publish": "./docker-publish.sh",
     "lint": "eslint ./src",
     "test": "tsx --test test/**/*.test.ts",
-    "start": "yarn build && node bin/cli.js"
+    "start": "echo START && yarn build && node bin/cli.js",
+    "dev:serve": "tsx src/cli.ts serve --projects-root-dir C:/temp/aidon/Rivet_Files"
   },
   "dependencies": {
+    "@alpic80/rivet-core": "workspace:^",
     "@alpic80/rivet-node": "workspace:^",
     "@hono/node-server": "^1.13.8",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.0-aidon.3",
+    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.0-aidon.3",
     "@types/dotenv": "^8.2.3",
     "chalk": "^5.4.1",
     "didyoumean2": "^7.0.4",
