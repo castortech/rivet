@@ -415,6 +415,10 @@ const RAW_RUNTIME_STATE =
           ["@emotion/styled", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:11.13.0"],\
           ["@eslint/eslintrc", "npm:3.3.1"],\
           ["@floating-ui/react", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:0.26.23"],\
+          ["@ironclad/rivet-core", [\
+            "@alpic80/rivet-core",\
+            "workspace:packages/core"\
+          ]],\
           ["@ironclad/trivet", "workspace:packages/trivet"],\
           ["@recoiljs/refine", "npm:0.1.1"],\
           ["@swc/core", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:1.7.22"],\
