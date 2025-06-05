@@ -41,13 +41,11 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
     })
     .option('port', {
       describe: 'The port to serve on',
-      type: 'number',
-      default: 3000,
+      type: 'number'
     })
     .option('dev', {
       describe: 'Run in development mode: rereads the project file on each request',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('graph', {
       describe: 'The ID or name of the graph to run. If omitted, the main graph is used.',
@@ -56,8 +54,7 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
     })
     .option('allow-specifying-graph-id', {
       describe: 'Allow specifying the graph ID in the URL path',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('openai-api-key', {
       describe:
@@ -79,13 +76,11 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
     })
     .option('expose-cost', {
       describe: 'Expose the cost of the graph run in the response',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('expose-usage', {
       describe: 'Expose the token usage of the graph run in the response',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('stream', {  //support command delimited list and also [SFD] (start finish delta)
       describe:
@@ -100,18 +95,15 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
     })
     .option('log-requests', {
       describe: 'Determines if all requests (except health checks) will be logged via Hono logger',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('log-activity', {
       describe: 'Determines if basic activity should be logging during processing',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('log-trace', {
       describe: 'Determines if includeTrace should be turned on during graph processing',
-      type: 'boolean',
-      default: false,
+      type: 'boolean'
     })
     .option('projects-root-dir', {
       describe: 'Specifies the root directory where project files are located. If specified, a projectFile argument will be a relative path to this directory',
@@ -172,8 +164,8 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 		const pluginSettings = await setupPlugins(Rivet as RivetType);
 
 		const args: ServerContext = {
-			hostname: cliArgs.hostname ?? process.env.HOSTNAME ?? '127.0.0.1',
-			port: Number(cliArgs.port ?? process.env.PORT ?? 3000),
+			hostname: cliArgs.hostname ?? process.env.SERVE_HOSTNAME ?? '127.0.0.1',
+			port: Number(cliArgs.port ?? process.env.SERVE_PORT ?? 3000),
 			projectFile: cliArgs.projectFile ?? process.env.PROJECT_FILE,
 			dev: cliArgs.dev ?? process.env.NODE_ENV === 'development',
 			graph: cliArgs.graph ?? process.env.GRAPH,
@@ -215,7 +207,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			throwIfInvalidGraph(initialProject, args.graph);
 		}
 
-		console.log(chalk.green('Server running version 10'));
+		console.log(chalk.green('Server running version 11'));
 
 		if (args.logActivity) {
 			const logInfo = [

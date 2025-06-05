@@ -125,7 +125,8 @@ Options are first taken from the command line, then the environment and finally 
 
 ### Server Configuration
 
-- `--port <port>`: The port to run the server on. Default is 3000. Environment: `PORT`, RunParams: N/A.
+- `--port <port>`: The port to run the server on. Default is 3000. Environment: `SERVE_PORT`, RunParams: N/A.
+- `--hostame <hostname>`: The hostname to run the server with. Default is `loclahost`. Environment: `SERVE_PORT`, RunParams: N/A.
 - `--dev`: Runs the server in development mode, which will reread the project file on each request. Useful for development.
 					Environment NODE_ENV === 'development', RunParams: N/A.
 
