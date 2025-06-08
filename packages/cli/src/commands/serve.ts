@@ -227,6 +227,9 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 
     app.post('/', async (c) => {
 			if (args.projectsRootDir) {
+				if (args.logActivity) {
+					console.error(chalk.red('Status 400 - Configured with projects-root-dir which requires a project file to be specified in URL,'));
+				}
 				return c.text('Configured with projects-root-dir which requires a project file to be specified in URL', 400);
 			}
 
@@ -258,11 +261,17 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
         let project;
 				if (args.projectsRootDir) {
 					if (!graphFile) {
+						if (args.logActivity) {
+							console.error(chalk.red('Status 400 - A graphFile is required when specifying projects-root-dir,'));
+						}
 						return c.text('A graphFile is required when specifying projects-root-dir', 400);
 					}
 
 					const fileMissing = await testIfMissingFile(path.join(args.projectsRootDir, graphFile));
 					if (fileMissing) {
+						if (args.logActivity) {
+							console.error(chalk.red(`GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`));
+						}
 						return c.text(`GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`, 400);
 					}
 					project = await loadProjectFromFile(path.join(args.projectsRootDir, graphFile));
