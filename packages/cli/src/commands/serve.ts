@@ -270,7 +270,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 					const fileMissing = await testIfMissingFile(path.join(args.projectsRootDir, graphFile));
 					if (fileMissing) {
 						if (args.logActivity) {
-							console.error(chalk.red(`GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`));
+							console.error(chalk.red(`Status 400 - GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`));
 						}
 						return c.text(`GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`, 400);
 					}
