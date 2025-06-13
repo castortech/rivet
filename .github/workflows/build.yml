@@ -13,6 +13,10 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
+      - name: Enable corepack
+        run: corepack enable
+      - name: Use Yarn 4.8.1
+        run: corepack prepare yarn@4.8.1 --activate
       - name: Clear Yarn cache
         run: yarn cache clean
       - name: Clean install with Yarn PnP
