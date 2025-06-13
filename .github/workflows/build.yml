@@ -34,6 +34,9 @@ jobs:
           rm -rf .yarn/cache .yarn/install-state.gz
           yarn install --immutable
 
+      - name: Unplug tsx for ESM compatibility
+        run: yarn unplug tsx
+
       - name: Build
         run: yarn build
         env:
