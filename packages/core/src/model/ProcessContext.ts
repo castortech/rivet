@@ -15,6 +15,7 @@ import {
   type AudioProvider,
   type StringArrayDataValue,
   type ProjectId,
+  type MCPProvider,
 } from '../index.js';
 import type { Tokenizer } from '../integrations/Tokenizer.js';
 import type { CodeRunner } from '../integrations/CodeRunner.js';
@@ -26,6 +27,9 @@ export type ProcessContext = {
 
   /** Sets the dataset provider to be used for all dataset node calls. */
   datasetProvider?: DatasetProvider;
+
+  /** Provider for all MCP node functionality */
+  mcpProvider?: MCPProvider;
 
   /** The provider responsible for being able to play audio. Undefined if unsupported in this context. */
   audioProvider?: AudioProvider;
@@ -83,6 +87,9 @@ export type InternalProcessContext<T extends ChartNode = ChartNode> = ProcessCon
 
   /** Outputs from the graph. A GraphOutputNode will set these. */
   graphOutputs: Record<string, DataValue>;
+
+  /** Stores the resolved output values of GraphInput nodes during execution, keyed by the node's data.id. */
+  graphInputNodeValues: Record<string, DataValue>;
 
   /** The tokenizer to use to tokenize all strings.s */
   tokenizer: Tokenizer;

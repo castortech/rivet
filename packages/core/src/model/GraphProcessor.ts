@@ -191,7 +191,7 @@ export class GraphProcessor {
   slowMode = false;
   #isPaused = false;
   #parent: GraphProcessor | undefined;
-  readonly #registry: NodeRegistration;
+  readonly #registry: NodeRegistration<any, any>;
   id = nanoid();
 
   readonly #includeTrace?: boolean = true;
@@ -253,6 +253,8 @@ export class GraphProcessor {
 
   #nodeAbortControllers = new Map<`${NodeId}-${ProcessId}`, AbortController>();
 
+  #graphInputNodeValues: Record<string, DataValue> = {};
+
   /** User input nodes that are pending user input. */
   #pendingUserInputs: Record<
     NodeId,
@@ -263,7 +265,7 @@ export class GraphProcessor {
     return this.#running;
   }
 
-  constructor(project: Project, graphId?: GraphId, registry?: NodeRegistration, includeTrace?: boolean) {
+  constructor(project: Project, graphId?: GraphId, registry?: NodeRegistration<any, any>, includeTrace?: boolean) {
     this.#project = project;
     const graph = graphId
       ? project.graphs[graphId]
@@ -764,6 +766,7 @@ export class GraphProcessor {
     this.#abortSuccessfully = false;
     this.#nodeAbortControllers = new Map();
     this.#loadedProjects = {};
+    this.#graphInputNodeValues = {};
   }
 
   /** Main function for running a graph. Runs a graph and returns the outputs from the output nodes of the graph. */
@@ -1702,6 +1705,7 @@ export class GraphProcessor {
 
         return results;
       },
+      graphInputNodeValues: this.#graphInputNodeValues,
     };
 
     await this.#waitUntilUnpaused();

@@ -34,16 +34,8 @@ import { uint8ArrayToBase64 } from '../../../utils/base64.js';
 import { pluginNodeDefinition } from '../../../model/NodeDefinition.js';
 import { getScalarTypeOf, isArrayDataValue } from '../../../model/DataValue.js';
 import type { TokenizerCallInfo } from '../../../integrations/Tokenizer.js';
-import { getInputOrData } from '../../../utils/inputs.js';
-import {
-  type GoogleGenerativeAIFetchError,
-  SchemaType,
-  type Content,
-  type FunctionDeclaration,
-  type Part,
-  type Tool,
-  type FunctionCall,
-} from '@google/generative-ai';
+import { getInputOrData, cleanHeaders } from '../../../utils/inputs.js';
+import { type Content, type FunctionDeclaration, type Part, type Tool, type FunctionCall, Type } from '@google/genai';
 import { mapValues } from 'lodash-es';
 
 export type ChatGoogleNode = ChartNode<'chatGoogle', ChatGoogleNodeData>;
@@ -55,6 +47,8 @@ export type ChatGoogleNodeConfigData = {
   top_p?: number;
   top_k?: number;
   maxTokens: number;
+  thinkingBudget: number | undefined;
+  headers?: { key: string; value: string }[];
 };
 
 export type ChatGoogleNodeData = ChatGoogleNodeConfigData & {
@@ -65,6 +59,8 @@ export type ChatGoogleNodeData = ChatGoogleNodeConfigData & {
   useUseTopPInput: boolean;
   useMaxTokensInput: boolean;
   useToolCalling: boolean;
+  useThinkingBudgetInput: boolean;
+  useHeadersInput?: boolean;
 
   /** Given the same set of inputs, return the same output without hitting GPT */
   cache: boolean;
@@ -87,7 +83,7 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
         width: 275,
       },
       data: {
-        model: 'gemini-2.0-flash-001',
+        model: 'gemini-2.5-flash-preview-04-17',
         useModelInput: false,
 
         temperature: 0.5,
@@ -109,6 +105,9 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
         useAsGraphPartialOutput: true,
 
         useToolCalling: false,
+
+        thinkingBudget: undefined,
+        useThinkingBudgetInput: false,
       },
     };
 
@@ -176,11 +175,29 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
       });
     }
 
+    if (data.useThinkingBudgetInput) {
+      inputs.push({
+        dataType: 'number',
+        id: 'thinkingBudget' as PortId,
+        title: 'Thinking Budget',
+        description: 'The token budget for the model to think before responding.',
+      });
+    }
+
     inputs.push({
       dataType: ['chat-message', 'chat-message[]'] as const,
       id: 'prompt' as PortId,
       title: 'Prompt',
     });
+
+    if (data.useHeadersInput) {
+      inputs.push({
+        dataType: 'object',
+        id: 'headers' as PortId,
+        title: 'Headers',
+        description: 'Additional headers to send to the API.',
+      });
+    }
 
     return inputs;
   },
@@ -229,6 +246,7 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
           : `Temperature: ${data.useTemperatureInput ? '(Using Input)' : data.temperature}`
       }
       Max Tokens: ${data.maxTokens}
+      Thinking Budget: ${data.thinkingBudget ?? 'Automatic'}
     `;
   },
 
@@ -275,6 +293,17 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
         step: 1,
       },
       {
+        type: 'number',
+        label: 'Thinking Budget',
+        dataKey: 'thinkingBudget',
+        allowEmpty: true,
+        step: 1,
+        min: 0,
+        max: Number.MAX_SAFE_INTEGER,
+        useInputToggleDataKey: 'useThinkingBudgetInput',
+        helperMessage: 'The token budget for the model to think before responding. Leave blank for automatic budget.',
+      },
+      {
         type: 'toggle',
         label: 'Enable Tool Calling',
         dataKey: 'useToolCalling',
@@ -288,6 +317,14 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
         type: 'toggle',
         label: 'Use for subgraph partial output',
         dataKey: 'useAsGraphPartialOutput',
+      },
+      {
+        type: 'keyValuePair',
+        label: 'Headers',
+        dataKey: 'headers',
+        useInputToggleDataKey: 'useHeadersInput',
+        keyPlaceholder: 'Header',
+        helperMessage: 'Additional headers to send to the API.',
       },
     ];
   },
@@ -314,6 +351,7 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
     const temperature = getInputOrData(data, inputs, 'temperature', 'number');
     const topP = getInputOrData(data, inputs, 'top_p', 'number');
     const useTopP = getInputOrData(data, inputs, 'useTopP', 'boolean');
+    const thinkingBudget = getInputOrData(data, inputs, 'thinkingBudget', 'number');
 
     const { messages } = getChatGoogleNodeMessages(inputs);
 
@@ -449,7 +487,7 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
                   Object.keys((tool.parameters as any).properties).length === 0
                     ? undefined
                     : {
-                        type: SchemaType.OBJECT,
+                        type: Type.OBJECT,
                         properties: mapValues((tool.parameters as any).properties, (p: any) => ({
                           // gemini doesn't support union property types, it uses openapi style not jsonschema, what a mess
                           type: Array.isArray(p.type) ? p.type.filter((t: any) => t !== 'null')[0] : p.type,
@@ -476,6 +514,23 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
       }
     }
 
+    const headersFromData = (data.headers ?? []).reduce(
+      (acc, header) => {
+        acc[header.key] = header.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    const additionalHeaders = data.useHeadersInput
+      ? (coerceTypeOptional(inputs['headers' as PortId], 'object') as Record<string, string> | undefined) ??
+        headersFromData
+      : headersFromData;
+
+    const allAdditionalHeaders = cleanHeaders({
+      ...context.settings.chatNodeHeaders,
+      ...additionalHeaders,
+    });
+
     try {
       return await retry(
         async () => {
@@ -488,6 +543,8 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
             systemPrompt,
             topK: undefined,
             tools,
+            thinkingBudget,
+            additionalHeaders: allAdditionalHeaders,
           };
           const cacheKey = JSON.stringify(options);
 
@@ -518,6 +575,8 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
               apiKey,
               systemPrompt,
               tools,
+              thinkingBudget,
+              additionalHeaders: allAdditionalHeaders,
             });
           } else {
             chunks = streamChatCompletions({
@@ -536,6 +595,15 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
 
           const responseParts: string[] = [];
           const functionCalls: FunctionCall[] = [];
+
+          let throttleLastCalledTime = Date.now();
+          const onPartialOutput = (output: Outputs) => {
+            const now = Date.now();
+            if (now - throttleLastCalledTime > (context.settings.throttleChatNode ?? 100)) {
+              context.onPartialOutputs?.(output);
+              throttleLastCalledTime = now;
+            }
+          };
 
           for await (const chunk of chunks) {
             if (chunk.completion) {
@@ -560,8 +628,11 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
               };
             }
 
-            context.onPartialOutputs?.(output);
+            onPartialOutput?.(output);
           }
+
+          // Call one last time manually to ensure the last output is sent
+          context.onPartialOutputs?.(output);
 
           const endTime = Date.now();
 
@@ -577,8 +648,8 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
                   functionCalls.length === 0
                     ? undefined
                     : functionCalls.map((fc) => ({
-                        id: fc.name,
-                        name: fc.name,
+                        id: fc.name!,
+                        name: fc.name!,
                         arguments: JSON.stringify(fc.args),
                       })),
               },
@@ -628,7 +699,7 @@ export const ChatGoogleNodeImpl: PluginNodeImpl<ChatGoogleNode> = {
           onFailedAttempt(err) {
             context.trace(`ChatGoogleNode failed, retrying: ${err.toString()}`);
 
-            const googleError = err as GoogleGenerativeAIFetchError;
+            const googleError = err as { status?: number; message?: string };
 
             if (googleError.status && googleError.status >= 400 && googleError.status < 500) {
               if (googleError.status === 429) {

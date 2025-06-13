@@ -59,6 +59,19 @@
       ]
     },
     {
+      "login": "AryamanAgrawalIronclad",
+      "name": "Aryaman Agrawal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/107009412?v=4",
+      "profile": "https://github.com/AryamanAgrawal",
+      "contributions": [
+        "code",
+        "doc",
+        "ideas",
+        "promotion",
+        "bug"
+      ]
+    },
+    {
       "login": "a-rothwell",
       "name": "Andrew Rothwell",
       "avatar_url": "https://avatars.githubusercontent.com/u/12634659?v=4",
@@ -416,6 +429,15 @@
       ]
     },
     {
+      "login": "suhail-ak-s",
+      "name": "Suhail AK",
+      "avatar_url": "https://avatars.githubusercontent.com/u/157091287?v=4",
+      "profile": "https://github.com/suhail-ak-s",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
       "login": "julianolm",
       "name": "Juliano Amadeu",
       "avatar_url": "https://avatars.githubusercontent.com/u/65794514?v=4",
@@ -423,6 +445,15 @@
       "contributions": [
         "code",
         "ideas"
+      ]
+    },
+    {
+      "login": "valerypopoff",
+      "name": "Valera Popov",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5064630?v=4",
+      "profile": "http://valerypopoff.ru",
+      "contributions": [
+        "code"
       ]
     }
   ],

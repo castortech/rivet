@@ -90,6 +90,22 @@ export const anthropicModels = {
     },
     displayName: 'Claude 3.7 Sonnet',
   },
+  'claude-sonnet-4-20250514': {
+    maxTokens: 200_000,
+    cost: {
+      prompt: 3e-6,
+      completion: 3.75e-6,
+    },
+    displayName: 'Claude Sonnet 4',
+  },
+  'claude-opus-4-20250514': {
+    maxTokens: 200_000,
+    cost: {
+      prompt: 15e-6,
+      completion: 18.75e-6,
+    },
+    displayName: 'Claude Opus 4',
+  },
 } satisfies Record<string, AnthropicModel>;
 
 export type AnthropicModels = keyof typeof anthropicModels;
@@ -178,6 +194,7 @@ export type ChatMessageOptions = {
     input_schema: object;
   }[];
   beta?: string;
+  additionalHeaders?: Record<string, string>;
 };
 
 export type ChatCompletionOptions = {
@@ -192,6 +209,7 @@ export type ChatCompletionOptions = {
   top_k?: number;
   signal?: AbortSignal;
   stream?: boolean;
+  additionalHeaders?: Record<string, string>;
 };
 
 export type ChatCompletionChunk = {
@@ -334,6 +352,7 @@ export async function* streamChatCompletions({
   apiEndpoint,
   apiKey,
   signal,
+  additionalHeaders,
   ...rest
 }: ChatCompletionOptions): AsyncGenerator<ChatCompletionChunk> {
   const defaultSignal = new AbortController().signal;
@@ -344,6 +363,7 @@ export async function* streamChatCompletions({
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
+      ...additionalHeaders,
     },
     body: JSON.stringify({
       ...rest,
@@ -386,6 +406,7 @@ export async function callMessageApi({
   signal,
   tools,
   beta,
+  additionalHeaders,
   ...rest
 }: ChatMessageOptions): Promise<ChatMessageResponse> {
   const defaultSignal = new AbortController().signal;
@@ -397,6 +418,7 @@ export async function callMessageApi({
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
       ...(beta ? { 'anthropic-beta': beta } : {}),
+      ...additionalHeaders,
     },
     body: JSON.stringify({
       ...rest,
@@ -417,6 +439,7 @@ export async function* streamMessageApi({
   apiKey,
   signal,
   beta,
+  additionalHeaders,
   ...rest
 }: ChatMessageOptions): AsyncGenerator<ChatMessageChunk> {
   // Use the Messages API for Claude 3 models
@@ -429,6 +452,7 @@ export async function* streamMessageApi({
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
       ...(beta ? { 'anthropic-beta': beta } : {}),
+      ...additionalHeaders,
     },
     body: JSON.stringify({
       ...rest,

@@ -1,4 +1,4 @@
-import { type Content, type FunctionCall, type Tool } from '@google/generative-ai';
+import { type Content, type FunctionCall, type Tool } from '@google/genai';
 
 export type GoogleModelDeprecated = {
   maxTokens: number;
@@ -31,11 +31,19 @@ export const googleModelsDeprecated = {
 export type GoogleModelsDeprecated = keyof typeof googleModelsDeprecated;
 
 export const generativeAiGoogleModels = {
-  'gemini-2.0-flash-001': {
+  'gemini-2.5-flash-preview-04-17': {
     maxTokens: 1048576,
     cost: {
       prompt: 0.15 / 1000,
       completion: 0.6 / 1000,
+    },
+    displayName: 'Gemini 2.5 Flash Preview',
+  },
+  'gemini-2.0-flash-001': {
+    maxTokens: 1048576,
+    cost: {
+      prompt: 0.1 / 1000,
+      completion: 0.4 / 1000,
     },
     displayName: 'Gemini 2.0 Flash',
   },
@@ -155,6 +163,8 @@ export type StreamGenerativeAiOptions = {
   topK: number | undefined;
   signal?: AbortSignal;
   tools: Tool[] | undefined;
+  thinkingBudget?: number;
+  additionalHeaders?: Record<string, string>;
 };
 
 export async function* streamGenerativeAi({
@@ -168,30 +178,35 @@ export async function* streamGenerativeAi({
   topK,
   signal,
   tools,
+  thinkingBudget,
+  additionalHeaders,
 }: StreamGenerativeAiOptions): AsyncGenerator<ChatCompletionChunk> {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAi = new GoogleGenerativeAI(apiKey);
+  const { GoogleGenAI } = await import('@google/genai');
+  const genAi = new GoogleGenAI({ apiKey });
 
-  const genaiModel = genAi.getGenerativeModel({
+  const result = await genAi.models.generateContentStream({
     model,
-    systemInstruction: systemPrompt,
-    generationConfig: {
+    contents: prompt,
+    config: {
+      systemInstruction: systemPrompt,
       maxOutputTokens,
       temperature,
       topP,
       topK,
+      tools,
+      abortSignal: signal,
+      thinkingConfig: {
+        thinkingBudget,
+      },
+      httpOptions: {
+        headers: {
+          ...additionalHeaders,
+        },
+      },
     },
-    tools,
   });
 
-  const result = await genaiModel.generateContentStream(
-    {
-      contents: prompt,
-    },
-    { signal },
-  );
-
-  for await (const chunk of result.stream) {
+  for await (const chunk of result) {
     const outChunk: ChatCompletionChunk = {
       completion: undefined,
       finish_reason: undefined,
@@ -199,7 +214,7 @@ export async function* streamGenerativeAi({
       model,
     };
 
-    const functionCalls = chunk.functionCalls();
+    const functionCalls = chunk.functionCalls;
     if (functionCalls) {
       outChunk.function_calls = functionCalls;
     }
