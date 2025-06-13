@@ -12,38 +12,38 @@ jobs:
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-steps:
-  - uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v3
 
-  - name: Enable corepack
-    run: corepack enable
+      - name: Enable corepack
+        run: corepack enable
 
-  - name: Use Yarn 4.8.1
-    run: corepack prepare yarn@4.8.1 --activate
+      - name: Use Yarn 4.8.1
+        run: corepack prepare yarn@4.8.1 --activate
 
-  - uses: actions/setup-node@v3
-    with:
-      node-version: '20.4.x'
-      cache: 'yarn'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.4.x'
+          cache: 'yarn'
 
-  - name: Clear Yarn cache
-    run: yarn cache clean
+      - name: Clear Yarn cache
+        run: yarn cache clean
 
-  - name: Clean install with Yarn PnP
-    run: |
-      rm -rf .yarn/cache .yarn/install-state.gz
-      yarn install --immutable
+      - name: Clean install with Yarn PnP
+        run: |
+          rm -rf .yarn/cache .yarn/install-state.gz
+          yarn install --immutable
 
-  - name: Build
-    run: yarn build
-    env:
-      NODE_OPTIONS: --max_old_space_size=6000
+      - name: Build
+        run: yarn build
+        env:
+          NODE_OPTIONS: --max_old_space_size=6000
 
-  - name: Test
-    run: yarn test
+      - name: Test
+        run: yarn test
 
-  - name: Lint
-    run: yarn lint
+      - name: Lint
+        run: yarn lint
 
-  - name: Prettier
-    run: yarn prettier --check
+      - name: Prettier
+        run: yarn prettier --check
