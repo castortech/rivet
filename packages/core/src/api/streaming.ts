@@ -72,6 +72,12 @@ export type RivetEventStreamEventInfo = {
   } & RivetEventStreamEvent[P];
 }[keyof RivetEventStreamEvent];
 
+function nodeMatches(spec: any, event: any) {
+	return 	spec?.includes(event.node.id) ||
+					spec?.includes(event.node.data?.id) ||
+					spec?.includes(event.node.title)
+}
+
 /** A simplified way to listen and stream processor events, including filtering. */
 export async function* getProcessorEvents(
   processor: GraphProcessor,
@@ -84,11 +90,9 @@ export async function* getProcessorEvents(
     if (event.type === 'partialOutput') {
       if (
         spec.partialOutputs === true ||
-        spec.partialOutputs?.includes(event.node.id) ||
-        spec.partialOutputs?.includes(event.node.title)
+				nodeMatches(spec.partialOutputs, event)
       ) {
         const currentOutput = coerceType(event.outputs['response' as PortId], 'string');
-
         const delta = currentOutput.slice(previousIndexes.get(event.node.id) ?? 0);
 
         yield {
@@ -136,8 +140,8 @@ export async function* getProcessorEvents(
     } else if (event.type === 'nodeStart') {
       if (
         spec.nodeStart === true ||
-        spec.nodeStart?.includes(event.node.id) ||
-        spec.nodeStart?.includes(event.node.title)
+				nodeMatches(spec.nodeStart, event)
+
       ) {
         yield {
           type: 'nodeStart',
@@ -156,8 +160,7 @@ export async function* getProcessorEvents(
 
       if (
         spec.nodeFinish === true ||
-        spec.nodeFinish?.includes(event.node.id) ||
-        spec.nodeFinish?.includes(event.node.title)
+				nodeMatches(spec.nodeFinish, event)
       ) {
         yield {
           type: 'nodeFinish',
@@ -231,6 +234,10 @@ export function getSingleNodeStream(processor: GraphProcessor, arg: RivetEventSt
           if (event.type === 'partialOutput') {  //nodeIdOrTitle filter managed by spec
             controller.enqueue(`data: ${JSON.stringify(event.delta)}\n\n`);
           }
+					else if (event.type === 'nodeFinish') {
+						const value = (event.outputs as Record<string, any>)['valueOutput']?.value
+            controller.enqueue(`data: ${JSON.stringify(value)}\n\n`);
+					}
 					else if (event.type === 'error') {
 						controller.enqueue(`error: ${JSON.stringify(event.error)}\n\n`);
 					}

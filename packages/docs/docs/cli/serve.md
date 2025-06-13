@@ -367,7 +367,8 @@ a JSON object with the relevant information for that event.
 If you pass an argument value to the `stream` option, you can control which node or nodes are streamed and the type of events to stream.
 This is useful if you are only interested in the events for specific nodes in the graph or just some event types.
 
-First, nodes are identified by either their Id or Title.
+First, nodes are identified by either their Id or Title. Here Id is either the internal generated Id (i.e. "vzC9lcEyXZ2Q1-cCaG0v4")
+or the id entered in the node itself on Graph Input or Graph Output.
 
 The argument to stream takes a comma-separated list of node with an optional event type selector.
 
