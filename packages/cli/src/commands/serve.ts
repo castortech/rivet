@@ -82,7 +82,7 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
       describe: 'Expose the token usage of the graph run in the response',
       type: 'boolean'
     })
-    .option('stream', {  //support command delimited list and also [SFD] (start finish delta)
+    .option('stream', {  //supports command delimited list and also [SFD] (start finish delta)
       describe:
         'Turns on streaming mode. Rivet events will be sent to the client using SSE (Server-Sent Events). If this is set to a Node ID or node title, only events for that node will be sent.',
       type: 'string',
@@ -90,6 +90,12 @@ export function makeCommand<T>(y: yargs.Argv<T>) {
     })
     .option('stream-node', {
       describe: 'Streams the partial outputs of a specific node. Requires --stream to be set.',
+      type: 'string',
+      demandOption: false,
+    })
+    .option('events', {  //supports command delimited list
+      describe:
+        'Turns on listening to events triggered by "Raise Event" nodes. Events will be sent to the client using SSE (Server-Sent Events). Value is a list of event names, only valid with stream option',
       type: 'string',
       demandOption: false,
     })
@@ -145,6 +151,7 @@ type ServerContext = {
 	logTrace: boolean;
   stream: string | undefined;
   streamNode: string | undefined;
+  events: string | undefined;
 	projectsRootDir: string | undefined;
 	pluginSettings?: Record<string, Record<string, unknown>>;
 }
@@ -180,6 +187,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			logTrace: cliArgs.logTrace ?? (process.env.LOG_TRACE === 'true'),
 			stream: cliArgs.stream ?? process.env.STREAM,
 			streamNode: cliArgs.streamNode ?? process.env.STREAM_NODE,
+			events: cliArgs.events ?? process.env.EVENTS,
 			projectsRootDir: cliArgs.projectsRootDir ?? process.env.PROJECTS_ROOT_DIR,
 			pluginSettings: pluginSettings,
 		}
@@ -373,6 +381,7 @@ function createProcessGraph(ctx: ServerContext) {
 				`Input:${JSON.stringify(inputs)}`,
 				localCtx.stream && `Stream:${chalk.bold.white(localCtx.stream)}`,
 				localCtx.streamNode && `StreamNode:${chalk.bold.white(localCtx.streamNode)}`,
+				localCtx.events && `Stream:${chalk.bold.white(localCtx.events)}`,
 				localCtx.exposeCost && `ExposeCost:${chalk.bold.white(localCtx.exposeCost)}`,
 				localCtx.exposeUsage && `ExposeUsage:${chalk.bold.white(localCtx.exposeUsage)}`,
 				localCtx.logTrace && `LogTrace:${chalk.bold.white(localCtx.logTrace)}`
@@ -453,6 +462,7 @@ async function streamGraph({
 	logTrace,
   stream,
   streamNode,
+	events
 }: {
   project: Project;
   inputs: Record<string, LooseDataValue>;
@@ -467,6 +477,7 @@ async function streamGraph({
 	logTrace: boolean;
   stream: string | undefined;
   streamNode: string | undefined;
+	events: string | undefined;
 }): Promise<ReadableStream> {
   const { run, processor, getSSEStream } = createProcessor(project, {
     inputs,
@@ -480,7 +491,7 @@ async function streamGraph({
 
   if (streamNode) {
     let sseStream;
-		if (exposeCost || exposeUsage) {
+		if (exposeCost || exposeUsage || events) {
 			const baseOptions = {
 				exposeCost,
 				exposeUsage,
@@ -492,6 +503,7 @@ async function streamGraph({
 				...baseOptions,
 				partialOutputs: [streamNode],
 				nodeFinish: [streamNode],
+				userStreamEvents: events
 			};
 		 sseStream = getSingleNodeStream(processor, spec);
 		}
@@ -515,12 +527,13 @@ async function streamGraph({
 		};
 		const sseStream = getSSEStream(
 			parsed === true
-				? { ...baseOptions, nodeStart: true, nodeFinish: true, partialOutputs: true }
+				? { ...baseOptions, nodeStart: true, nodeFinish: true, partialOutputs: true, userStreamEvents: events }
 				: {
 						...baseOptions,
 						nodeStart: parsed.start,
 						nodeFinish: parsed.finish,
-						partialOutputs: parsed.delta
+						partialOutputs: parsed.delta,
+						userStreamEvents: events
 					}
 		);
 

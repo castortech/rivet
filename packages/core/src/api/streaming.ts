@@ -7,6 +7,8 @@ import {
   type PortId,
 	type ArrayDataValue,
 	type AnyDataValue,
+	type DataValue,
+	type RunGraphOptions,
 } from '../index.js';
 import { coerceType } from '../utils/coerceType.js';
 
@@ -34,6 +36,9 @@ export type RivetEventStreamFilterSpec = {
 
   /** Stream node finish events for the specified nodeIDs or node titles. */
   nodeFinish?: string[] | true;
+
+  /** Optional list of user events (comma separated list) to stream as part of the output. */
+  userStreamEvents?: string | undefined;
 };
 
 /** Map of all possible event names to their data for streaming events. */
@@ -61,6 +66,11 @@ export type RivetEventStreamEvent = {
     graphOutput: GraphOutputs;
   };
 
+  event: {
+		name: string;
+    message: string;
+  };
+
   error: {
     error: string;
   };
@@ -85,6 +95,7 @@ export async function* getProcessorEvents(
 ): AsyncGenerator<RivetEventStreamEventInfo, void> {
   const previousIndexes = new Map<NodeId, number>();
 	const usages: unknown[] = [];
+	let hasDelta = false;
 
   for await (const event of processor.events()) {
     if (event.type === 'partialOutput') {
@@ -94,6 +105,7 @@ export async function* getProcessorEvents(
       ) {
         const currentOutput = coerceType(event.outputs['response' as PortId], 'string');
         const delta = currentOutput.slice(previousIndexes.get(event.node.id) ?? 0);
+				hasDelta = true;
 
         yield {
           type: 'partialOutput',
@@ -158,9 +170,8 @@ export async function* getProcessorEvents(
 				}
 			}
 
-      if (
-        spec.nodeFinish === true ||
-				nodeMatches(spec.nodeFinish, event)
+      if ((spec.nodeFinish === true || nodeMatches(spec.nodeFinish, event)) &&
+					!(spec.removeFinalOutput && hasDelta)
       ) {
         yield {
           type: 'nodeFinish',
@@ -171,6 +182,29 @@ export async function* getProcessorEvents(
       }
     }
   }
+}
+
+export const createOnStreamUserEvents = (
+  eventList: string | undefined,
+	handleUserEvent: (event: string, data: DataValue | undefined) => Promise<void>
+): RunGraphOptions['onUserEvent'] => {
+	if (!eventList?.trim()) {
+		return undefined
+	}
+
+  const events = eventList.split(',').map(e => e.trim()).filter(Boolean)
+	if (!events.length) {
+		return undefined
+	}
+
+  return Object.fromEntries(
+    events.map(event => [
+      event,
+      async (data: DataValue | undefined) => {
+        await handleUserEvent(event, data)
+      }
+    ])
+  )
 }
 
 /**
@@ -199,6 +233,20 @@ export function getProcessorSSEStream(
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+    	const userEventHandler = async (eventName: string, data: DataValue | undefined) => {
+    	  sendEvent(controller, 'event', {
+  				name: eventName,
+  				message: coerceType(data, 'string')
+				})
+  	  }
+
+			const streamEvents = createOnStreamUserEvents(spec.userStreamEvents, userEventHandler);
+			if (streamEvents) {
+				for (const [name, fn] of Object.entries(streamEvents)) {
+					processor.onUserEvent(name, fn);
+				}
+			}
+
       try {
         for await (const event of getProcessorEvents(processor, spec)) {
           sendEvent(controller, event.type, event);
@@ -230,6 +278,21 @@ export function getSingleNodeStream(processor: GraphProcessor, arg: RivetEventSt
   return new ReadableStream<string>({
     async start(controller) {
       try {
+				const userEventHandler = async (eventName: string, data: DataValue | undefined) => {
+					const payload  = {
+						name: eventName,
+						message: coerceType(data, 'string')
+					}
+					controller.enqueue(`event: ${JSON.stringify(payload)}\n\n`);
+				}
+
+				const streamEvents = createOnStreamUserEvents(spec.userStreamEvents, userEventHandler);
+				if (streamEvents) {
+					for (const [name, fn] of Object.entries(streamEvents)) {
+						processor.onUserEvent(name, fn);
+					}
+				}
+
         for await (const event of getProcessorEvents(processor, spec)) {
           if (event.type === 'partialOutput') {  //nodeIdOrTitle filter managed by spec
             controller.enqueue(`data: ${JSON.stringify(event.delta)}\n\n`);

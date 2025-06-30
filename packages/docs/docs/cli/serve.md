@@ -152,9 +152,18 @@ Options are first taken from the command line, then the environment and finally 
 Here are the options for streaming, please see the section [Streaming Mode](#streaming-mode) for more information.
 
 - `--stream`: Activates streaming mode. Can also be used with argument to specify nodes and events to stream. Disabled by default.
-							Environment: `STREAM` (note that it should be an empty string), RunParams: `stream`.
+							Environment: `STREAM`, RunParams: `stream`.
 - `--stream-node`: When streaming mode is active, provide streaming text from a specified chat node. Disabled by default.
 							Environment: `STREAM_NODE`, RunParams: `streamNode`.
+
+### Events
+
+Here is the option for being returned events similar to using "Wait For Event" in the app. (triggered by Raise Event).
+This option is only supported in streaming mode (with stream or stream-node).
+
+- `--events`: Activates event capture when an event is raised streaming mode. Can also be used with argument to specify nodes and events to stream.
+							The value is a comma-separated list of event names (like the built-in toast). Disabled by default.
+							Environment: `EVENTS`, RunParams: `events`.
 
 ### Monitoring
 
@@ -385,6 +394,8 @@ If you are integrating with a simple application that only likes having text res
 
 You should only specify Chat nodes for this mode, as other nodes like Graph Output nodes may not have partial outputs that support this.
 
+The example output below shows also activating the toast event with `--events=toast` and having `--expose-cost` and `--expose-usage`
+
 This will cause the streaming to look like the following:
 
 ```
@@ -400,11 +411,15 @@ data: " It could be a model number, a"
 
 data: " code, or something else."
 
+event: {"name":"toast","message":"This is a test event message."}
+
 data: " Could you please provide more details or clarify what you"
 
 data: " are referring to?"
 
 data: " This will help me assist you better!"
+
+graphOutput: {"requestTokens":{"type":"number","value":16},"responseTokens":{"type":"number","value":1185},"cost":{"type":"number","value":0.0005019},"usages":{"type":"any[]","value":[{"type":"object","value":{"prompt_tokens":16,"completion_tokens":666,"total_tokens":682,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":0,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0},"prompt_cost":0.0000024,"completion_cost":0.0004995,"total_cost":0.0005019}}]}}
 ```
 
 You can see that each `data` event contains a delta of the response text from the node.
