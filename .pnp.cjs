@@ -772,6 +772,10 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@alpic80/rivet-core", "workspace:packages/core"],\
           ["@alpic80/rivet-node", "workspace:packages/node"],\
+          ["@ironclad/rivet-core", [\
+            "@alpic80/rivet-core",\
+            "workspace:packages/core"\
+          ]],\
           ["@modelcontextprotocol/sdk", "npm:1.12.3"],\
           ["@swc/core", "virtual:014ba62bbf3986b300104805e32e023a8b8b79b72788c920be0aa48536df70283e4c3bc4258573f3f937e7572611c6bcec740802bbda6cadc71bba56ff387e9c#npm:1.12.1"],\
           ["@types/eslint", "npm:8.56.12"],\
