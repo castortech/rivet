@@ -9,6 +9,7 @@ import {
 	type AnyDataValue,
 	type DataValue,
 	type RunGraphOptions,
+	type GraphEvents,
 } from '../index.js';
 import { coerceType } from '../utils/coerceType.js';
 
@@ -67,8 +68,7 @@ export type RivetEventStreamEvent = {
   };
 
   event: {
-		name: string;
-    message: string;
+		graphEvent: GraphEvents;
   };
 
   error: {
@@ -234,10 +234,11 @@ export function getProcessorSSEStream(
   return new ReadableStream<Uint8Array>({
     async start(controller) {
     	const userEventHandler = async (eventName: string, data: DataValue | undefined) => {
-    	  sendEvent(controller, 'event', {
+				const graphEvent = {
   				name: eventName,
   				message: coerceType(data, 'string')
-				})
+				}
+    	  sendEvent(controller, 'event', { graphEvent })
   	  }
 
 			const streamEvents = createOnStreamUserEvents(spec.userStreamEvents, userEventHandler);

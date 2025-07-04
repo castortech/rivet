@@ -158,7 +158,7 @@ Here are the options for streaming, please see the section [Streaming Mode](#str
 
 ### Events
 
-Here is the option for being returned events similar to using "Wait For Event" in the app. (triggered by Raise Event).
+Here is the option for returning events similar to using "Wait For Event" in the app. (triggered by Raise Event).
 This option is only supported in streaming mode (with stream or stream-node).
 
 - `--events`: Activates event capture when an event is raised streaming mode. Can also be used with argument to specify nodes and events to stream.
@@ -476,6 +476,9 @@ Response:
 event: partialOutput
 data: {"type":"partialOutput","nodeId":"N5YyV-zlVYCi6iuodTSwQ","nodeTitle":"chat","delta":""}
 ...
+event: event
+data: {"graphEvent":{"name":"toast","message":"This is a test event message."}}
+
 event: partialOutput
 data: {"type":"partialOutput","nodeId":"N5YyV-zlVYCi6iuodTSwQ","nodeTitle":"chat","delta":" contexts."}
 

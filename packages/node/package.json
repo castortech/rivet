@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@alpic80/rivet-core": "workspace:^",
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.2",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.3",
     "@modelcontextprotocol/sdk": "^1.10.2",
     "emittery": "^1.0.1",
     "emittery-0-13": "npm:emittery@^0.13.1",
@@ -62,7 +62,7 @@
     "@types/node": "^20.8.7",
     "@types/ws": "^8.5.8",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
-    "esbuild": "^0.19.5",
+    "esbuild": "^0.19.12",
     "eslint": "^9.20.1",
     "eslint-config-standard-with-typescript": "^39.1.1",
     "eslint-plugin-import": "^2.31.0",

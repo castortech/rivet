@@ -40,7 +40,7 @@ import type { NodeRegistration } from './NodeRegistration.js';
 import { getPluginConfig } from '../utils/index.js';
 import { GptTokenizerTokenizer } from '../integrations/GptTokenizerTokenizer.js';
 
-// eslint-disable-next-line import/no-cycle -- There has to be a cycle because CodeRunner needs to import the entirety of Rivet
+ 
 import { IsomorphicCodeRunner } from '../integrations/CodeRunner.js';
 
 // CJS compatibility, gets default.default for whatever reason
@@ -136,6 +136,10 @@ export type ProcessEvent = {
 
 export type GraphOutputs = Record<string, DataValue>;
 export type GraphInputs = Record<string, DataValue>;
+export type GraphEvents = {
+	name: string,
+	message: string
+};
 
 export type NodeResults = Map<NodeId, Outputs>;
 export type Inputs = Record<PortId, DataValue | undefined>;
