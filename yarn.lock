@@ -489,7 +489,7 @@ __metadata:
     "@alpic80/rivet-node": "workspace:^"
     "@hono/node-server": "npm:^1.13.8"
     "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.3"
-    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.1"
+    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.2"
     "@types/dotenv": "npm:^8.2.3"
     "@types/yargs": "npm:^17.0.29"
     "@typescript-eslint/eslint-plugin": "npm:^8.24.0"
@@ -566,7 +566,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@alpic80/rivet-node@workspace:^, @alpic80/rivet-node@workspace:packages/node, @ironclad/rivet-node@npm:@alpic80/rivet-node@1.24.2-aidon.1":
+"@alpic80/rivet-node@workspace:^, @alpic80/rivet-node@workspace:packages/node, @ironclad/rivet-node@npm:@alpic80/rivet-node@1.24.2-aidon.2":
   version: 0.0.0-use.local
   resolution: "@alpic80/rivet-node@workspace:packages/node"
   dependencies:
