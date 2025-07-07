@@ -104,7 +104,7 @@ The request body should contain the input values as described above.
 
 Outputs a JSON object with the output values of the graph.
 
-### `POST/path/to/projectfile::[graphId]`
+### `POST/path/to/projectfile:[graphId]`
 
 This is only enabled if the `--projects-root-dir` flag is used. This endpoint runs a specific project file and optionally a specific graph in that project file.
 

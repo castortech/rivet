@@ -249,7 +249,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
     if (args.allowSpecifyingGraphId || args.projectsRootDir) {
 			app.post('/*', async (c) => {
 				const full = decodeURIComponent(c.req.path.slice(1)) // remove leading slash
-				const parts = full.split('/')
+				const parts = full.split(':')
 
 				let graphId: GraphId | undefined
 				let graphFile: string | undefined
@@ -381,7 +381,7 @@ function createProcessGraph(ctx: ServerContext) {
 				`Input:${JSON.stringify(inputs)}`,
 				localCtx.stream && `Stream:${chalk.bold.white(localCtx.stream)}`,
 				localCtx.streamNode && `StreamNode:${chalk.bold.white(localCtx.streamNode)}`,
-				localCtx.events && `Stream:${chalk.bold.white(localCtx.events)}`,
+				localCtx.events && `Events:${chalk.bold.white(localCtx.events)}`,
 				localCtx.exposeCost && `ExposeCost:${chalk.bold.white(localCtx.exposeCost)}`,
 				localCtx.exposeUsage && `ExposeUsage:${chalk.bold.white(localCtx.exposeUsage)}`,
 				localCtx.logTrace && `LogTrace:${chalk.bold.white(localCtx.logTrace)}`
