@@ -235,10 +235,13 @@ export function getProcessorSSEStream(
     async start(controller) {
     	const userEventHandler = async (eventName: string, data: DataValue | undefined) => {
 				const graphEvent = {
-  				name: eventName,
-  				message: coerceType(data, 'string')
+					type: 'event',
+					graphEvent: {
+						name: eventName,
+						message: coerceType(data, 'string')
+					}
 				}
-    	  sendEvent(controller, 'event', { graphEvent })
+    	  sendEvent(controller, 'event', graphEvent )
   	  }
 
 			const streamEvents = createOnStreamUserEvents(spec.userStreamEvents, userEventHandler);
