@@ -2,7 +2,7 @@
   "name": "@alpic80/rivet-node",
   "license": "MIT",
   "repository": "https://github.com/ironclad/rivet",
-  "version": "1.24.2-aidon.2",
+  "version": "1.24.2-aidon.5",
   "main": "dist/cjs/bundle.cjs",
   "module": "dist/esm/index.js",
   "src": "src/index.ts",
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@alpic80/rivet-core": "workspace:^",
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.3",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.5",
     "@modelcontextprotocol/sdk": "^1.10.2",
     "emittery": "^1.0.1",
     "emittery-0-13": "npm:emittery@^0.13.1",

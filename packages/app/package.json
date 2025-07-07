@@ -63,7 +63,7 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.26.1",
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.3",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.5",
     "@ironclad/trivet": "workspace:^",
     "@recoiljs/refine": "^0.1.1",
     "@swc/core": "^1.3.94",
