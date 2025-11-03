@@ -704,7 +704,7 @@ const RAW_RUNTIME_STATE =
           ["@gentrace/core", "npm:2.8.3"],\
           ["@google-cloud/vertexai", "npm:0.1.3"],\
           ["@google/genai", "npm:0.12.0"],\
-          ["@huggingface/inference", "npm:2.8.1"],\
+          ["@huggingface/inference", "npm:4.13.0"],\
           ["@ironclad/rivet-core", [\
             "@alpic80/rivet-core",\
             "workspace:packages/core"\
@@ -7384,20 +7384,30 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@huggingface/inference", [\
-      ["npm:2.8.1", {\
-        "packageLocation": "./.yarn/cache/@huggingface-inference-npm-2.8.1-d28d745478-7fa0889f51.zip/node_modules/@huggingface/inference/",\
+      ["npm:4.13.0", {\
+        "packageLocation": "./.yarn/cache/@huggingface-inference-npm-4.13.0-490e6edef7-3afc73359b.zip/node_modules/@huggingface/inference/",\
         "packageDependencies": [\
-          ["@huggingface/inference", "npm:2.8.1"],\
-          ["@huggingface/tasks", "npm:0.12.30"]\
+          ["@huggingface/inference", "npm:4.13.0"],\
+          ["@huggingface/jinja", "npm:0.5.1"],\
+          ["@huggingface/tasks", "npm:0.19.61"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["@huggingface/jinja", [\
+      ["npm:0.5.1", {\
+        "packageLocation": "./.yarn/cache/@huggingface-jinja-npm-0.5.1-861f672c1c-6d70f0121d.zip/node_modules/@huggingface/jinja/",\
+        "packageDependencies": [\
+          ["@huggingface/jinja", "npm:0.5.1"]\
         ],\
         "linkType": "HARD"\
       }]\
     ]],\
     ["@huggingface/tasks", [\
-      ["npm:0.12.30", {\
-        "packageLocation": "./.yarn/cache/@huggingface-tasks-npm-0.12.30-3ddc52ada8-69d31aed98.zip/node_modules/@huggingface/tasks/",\
+      ["npm:0.19.61", {\
+        "packageLocation": "./.yarn/cache/@huggingface-tasks-npm-0.19.61-a1f45071b3-dc14c68a53.zip/node_modules/@huggingface/tasks/",\
         "packageDependencies": [\
-          ["@huggingface/tasks", "npm:0.12.30"]\
+          ["@huggingface/tasks", "npm:0.19.61"]\
         ],\
         "linkType": "HARD"\
       }]\

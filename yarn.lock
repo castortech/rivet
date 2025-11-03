@@ -517,7 +517,7 @@ __metadata:
     "@gentrace/core": "npm:^2.2.5"
     "@google-cloud/vertexai": "npm:^0.1.3"
     "@google/genai": "npm:^0.12.0"
-    "@huggingface/inference": "npm:^2.6.4"
+    "@huggingface/inference": "npm:^4.13.0"
     "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.5"
     "@swc/core": "npm:^1.3.94"
     "@types/crypto-js": "npm:^4.1.3"
@@ -534,20 +534,20 @@ __metadata:
     crypto-js: "npm:^4.2.0"
     emittery: "npm:^1.0.1"
     emittery-0-13: "npm:emittery@^0.13.1"
-    esbuild: "npm:^0.19.5"
+    esbuild: "npm:^0.25.12"
     eslint: "npm:^9.20.1"
     eslint-import-resolver-typescript: "npm:^3.6.1"
     eslint-plugin-import: "npm:^2.31.0"
     eslint-plugin-n: "npm:^16.2.0"
     eslint-plugin-promise: "npm:^6.1.1"
     gpt-tokenizer: "npm:^2.1.2"
-    jsonpath-plus: "npm:^10.2.0"
+    jsonpath-plus: "npm:^10.3.0"
     lodash: "npm:^4.17.21"
     lodash-es: "npm:^4.17.21"
     mdast-util-gfm-table: "npm:^2.0.0"
     mdast-util-to-markdown: "npm:^2.1.2"
     minimatch: "npm:^9.0.3"
-    nanoid: "npm:^3.3.6"
+    nanoid: "npm:^3.3.8"
     openai: "npm:^4.28.4"
     p-queue: "npm:^7.4.1"
     p-queue-6: "npm:p-queue@^6.0.0"
@@ -4394,19 +4394,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@huggingface/inference@npm:^2.6.4":
-  version: 2.8.1
-  resolution: "@huggingface/inference@npm:2.8.1"
+"@huggingface/inference@npm:^4.13.0":
+  version: 4.13.0
+  resolution: "@huggingface/inference@npm:4.13.0"
   dependencies:
-    "@huggingface/tasks": "npm:^0.12.9"
-  checksum: 10/7fa0889f51bc42d1412109e99ddafa0ea813585962c20300fc9987096bf2d9bb8a4523aad68c849f2b4fd404ac2488790e216be66ef3bbb2c1f3b1195d53ae39
+    "@huggingface/jinja": "npm:^0.5.1"
+    "@huggingface/tasks": "npm:^0.19.58"
+  checksum: 10/3afc73359b72dcbd7778366ac60275c1750c5ddf36ef1ccb1a6d41b6335b276c4ab1e71a12abd52a8d5ae09674530871ce7f4f54ec253622e733f634d30737df
   languageName: node
   linkType: hard
 
-"@huggingface/tasks@npm:^0.12.9":
-  version: 0.12.30
-  resolution: "@huggingface/tasks@npm:0.12.30"
-  checksum: 10/69d31aed989378d2ead0ca1651ecb5f788bc12e66463805d8e621d257bc375d3829fe50fa73afe5191cf48e45a3cd9a0c351a65adf639749e8a57e380e6ce5c3
+"@huggingface/jinja@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@huggingface/jinja@npm:0.5.1"
+  checksum: 10/6d70f0121dcc72faa904b25cb990717f63ce2d521facc7ce7e50a499f9dba8f58afd581741c9edf8660fc250570e250875f239b64835ad8f11c8cd23973b26cf
+  languageName: node
+  linkType: hard
+
+"@huggingface/tasks@npm:^0.19.58":
+  version: 0.19.61
+  resolution: "@huggingface/tasks@npm:0.19.61"
+  checksum: 10/dc14c68a53826a309a1b802a0d55a9de0b98efc71dc47c7412fd97cd19c5dd2abb8480f429917bbcceb2f648e47f56020f268e3c5d65b661c75264d77c71eadc
   languageName: node
   linkType: hard
 
@@ -4723,7 +4731,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.24.0"
     "@typescript-eslint/parser": "npm:^8.24.0"
     chalk: "npm:^5.3.0"
-    esbuild: "npm:^0.24.0"
+    esbuild: "npm:^0.25.12"
     eslint: "npm:^9.20.1"
     eslint-config-standard-with-typescript: "npm:^39.1.1"
     eslint-import-resolver-typescript: "npm:^3.6.1"
@@ -14314,7 +14322,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsonpath-plus@npm:^10.2.0":
+"jsonpath-plus@npm:^10.2.0, jsonpath-plus@npm:^10.3.0":
   version: 10.3.0
   resolution: "jsonpath-plus@npm:10.3.0"
   dependencies:
