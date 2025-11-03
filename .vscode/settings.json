@@ -17,6 +17,12 @@
   "rust-analyzer.linkedProjects": [
     "packages/app/src-tauri/Cargo.toml"
   ],
+  "workbench.colorCustomizations": {
+    "titleBar.activeForeground": "#eee",
+    "titleBar.activeBackground": "#daa807", // Change this color!
+	  "tab.activeBackground": "#636464",
+  	"tab.inactiveBackground": "#181c23"
+  },
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
