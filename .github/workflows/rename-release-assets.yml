@@ -23,3 +23,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_RELEASE_ID: ${{ github.event.release.id }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
