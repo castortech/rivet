@@ -384,7 +384,7 @@ The argument to stream takes a comma-separated list of node with an optional eve
 Each node in the list is of the form: `<NodeId/NodeTitle>[SFD]` where the first part is the node id or title followed by an optional type selector,
 which uses an event list enclosed in square bracket. The valid values are `S`tart, `F`inish and `D`elta (partial output).
 
-As an exmple we could have: `chat[FD],output[F]` to stream delta and finish event from the chat node and also to stream the finish even on the output node.
+As an exmple we could have: `chat[FD],output[F]` to stream delta and finish event from the chat node and also to stream the finish event on the output node.
 This gives you full flexibility to target exactly the content that you care about.
 
 
