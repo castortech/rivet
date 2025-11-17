@@ -32,7 +32,7 @@
 	},
 	//this is the one to use to debug the frontend code (not the Tauri Rust code)
 	{
-		"name": "Front-end App  Debug",
+		"name": "Front-end App Debug",
 		"type": "msedge",
 		"port": 9222,
 		"request": "launch",
