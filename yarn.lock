@@ -362,7 +362,7 @@ __metadata:
     "@atlaskit/icon": "npm:^21.12.7"
     "@atlaskit/inline-edit": "npm:^12.4.3"
     "@atlaskit/menu": "npm:^2.1.1"
-    "@atlaskit/modal-dialog": "npm:^12.8.3"
+    "@atlaskit/modal-dialog": "npm:^12.20.8"
     "@atlaskit/popup": "npm:^1.11.2"
     "@atlaskit/portal": "npm:^4.3.6"
     "@atlaskit/range": "npm:^7.1.7"
@@ -407,9 +407,9 @@ __metadata:
     "@vitejs/plugin-react": "npm:^4.1.0"
     ahooks: "npm:^3.7.8"
     clsx: "npm:^2.0.0"
-    core-js: "npm:^3.33.1"
-    csv-parse: "npm:^5.5.2"
-    csv-stringify: "npm:^6.4.4"
+    core-js: "npm:^3.46.0"
+    csv-parse: "npm:^5.6.0"
+    csv-stringify: "npm:^6.6.0"
     emittery: "npm:^1.0.3"
     enquirer: "npm:^2.4.1"
     esbuild: "npm:^0.19.5"
@@ -423,11 +423,14 @@ __metadata:
     eslint-plugin-react-hooks: "npm:5.2.0-canary-cd90a4d8-20250210"
     execa: "npm:^8.0.1"
     fast-deep-equal: "npm:^3.1.3"
+    file-browser-nodejs: "npm:1.0.0"
+    filesize: "npm:^11.0.13"
     fuse.js: "npm:^6.6.2"
     immer: "npm:^10.0.3"
     jest-diff: "npm:^29.7.0"
     jotai: "npm:^2.11.0"
     jsonpath-plus: "npm:^10.2.0"
+    jwt-decode: "npm:^4.0.0"
     lodash-es: "npm:^4.17.21"
     lru-cache: "npm:^11.0.0"
     majesticons: "npm:^2.1.2"
@@ -1092,7 +1095,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atlaskit/modal-dialog@npm:^12.8.3":
+"@atlaskit/modal-dialog@npm:^12.20.8":
   version: 12.20.8
   resolution: "@atlaskit/modal-dialog@npm:12.20.8"
   dependencies:
@@ -8516,6 +8519,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"axios@npm:^1.7.9":
+  version: 1.13.2
+  resolution: "axios@npm:1.13.2"
+  dependencies:
+    follow-redirects: "npm:^1.15.6"
+    form-data: "npm:^4.0.4"
+    proxy-from-env: "npm:^1.1.0"
+  checksum: 10/ae4e06dcd18289f2fd18179256d550d27f9a53ecb2f9c59f2ccc4efd1d7151839ba8c3e0fb533dac793e4a59a576ca8689a19244dce5c396680837674a47a867
+  languageName: node
+  linkType: hard
+
 "axobject-query@npm:^4.1.0":
   version: 4.1.0
   resolution: "axobject-query@npm:4.1.0"
@@ -9603,10 +9617,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"core-js@npm:^3.23.3, core-js@npm:^3.33.1":
+"core-js@npm:^3.23.3":
   version: 3.43.0
   resolution: "core-js@npm:3.43.0"
   checksum: 10/514952992863266b1a6a2d3c985e905461d37fe72d131d9320d5dbf01ac7e746f6fc53004b548347518cc832f7d2602b9a228acf6b5183e5cbede9dd296d73d3
+  languageName: node
+  linkType: hard
+
+"core-js@npm:^3.46.0":
+  version: 3.46.0
+  resolution: "core-js@npm:3.46.0"
+  checksum: 10/82993ca487c6cbbf8bbf00e45eeb9705eb63dc2f9c90d7f35696733efbc3f4b52426e1f8dbef0f0b68ea16caa21e4f44cc5490e08120e1cad4a72b031ed8adaa
   languageName: node
   linkType: hard
 
@@ -9950,17 +9971,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"csv-parse@npm:^5.5.2":
+"csv-parse@npm:^5.6.0":
   version: 5.6.0
   resolution: "csv-parse@npm:5.6.0"
   checksum: 10/4c82e11f50ae0ccbac2aed716ef2502d0468bf96552083561db789fc0258ee4bb0a30106fcfb2684f153cb4042f0413e0eac3645d5466874803b7ccdeba67ac8
   languageName: node
   linkType: hard
 
-"csv-stringify@npm:^6.4.4":
-  version: 6.5.2
-  resolution: "csv-stringify@npm:6.5.2"
-  checksum: 10/7715664020d291ccece25a32ecca617cea8d7e320af0c4e58cabbfb52d914832c3ea63c77c9796ca032ce6b47b899c879140c55bfd380105c42038ec305607a3
+"csv-stringify@npm:^6.6.0":
+  version: 6.6.0
+  resolution: "csv-stringify@npm:6.6.0"
+  checksum: 10/8ff6340c9352e85974961ee8719de1dc725e7d2cb7085a02c641bbe71a2c3eec6868e2bb296201d239d855df280952da5336cfd01a46db0c66e54597d753e7d6
   languageName: node
   linkType: hard
 
@@ -11858,6 +11879,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"file-browser-nodejs@npm:1.0.0":
+  version: 1.0.0
+  resolution: "file-browser-nodejs@npm:1.0.0"
+  dependencies:
+    axios: "npm:^1.7.9"
+    fs: "npm:^0.0.2"
+  checksum: 10/24d63a7ea1dbf17d7c728d23d79ab4158e37970311c8881d02fa6daf86d6e2cf0b5bc73583addbf2b45ac1f4dd2b6d81da4aeb6670e551690c2ac9b9ce993e4d
+  languageName: node
+  linkType: hard
+
 "file-entry-cache@npm:^8.0.0":
   version: 8.0.0
   resolution: "file-entry-cache@npm:8.0.0"
@@ -11876,6 +11907,13 @@ __metadata:
   peerDependencies:
     webpack: ^4.0.0 || ^5.0.0
   checksum: 10/3a854be3a7501bdb0fd8a1c0d45c156c0dc8f0afced07cbdac0b13a79c2f2a03f7770d68cb555ff30b5ea7c20719df34e1b2bd896c93e3138ee31f0bdc560310
+  languageName: node
+  linkType: hard
+
+"filesize@npm:^11.0.13":
+  version: 11.0.13
+  resolution: "filesize@npm:11.0.13"
+  checksum: 10/3797c6f6981d5d35ae224121e86d97ea942847b95b67170266ca442e2fa600f0bb9f99687a8b692d2275e964cf912bd88e148a6ddffb7b6b1d813076d40370eb
   languageName: node
   linkType: hard
 
@@ -12136,6 +12174,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"form-data@npm:^4.0.4":
+  version: 4.0.4
+  resolution: "form-data@npm:4.0.4"
+  dependencies:
+    asynckit: "npm:^0.4.0"
+    combined-stream: "npm:^1.0.8"
+    es-set-tostringtag: "npm:^2.1.0"
+    hasown: "npm:^2.0.2"
+    mime-types: "npm:^2.1.12"
+  checksum: 10/a4b62e21932f48702bc468cc26fb276d186e6b07b557e3dd7cc455872bdbb82db7db066844a64ad3cf40eaf3a753c830538183570462d3649fdfd705601cbcfb
+  languageName: node
+  linkType: hard
+
 "formdata-node@npm:^4.3.2":
   version: 4.4.1
   resolution: "formdata-node@npm:4.4.1"
@@ -12234,6 +12285,13 @@ __metadata:
   version: 1.0.0
   resolution: "fs.realpath@npm:1.0.0"
   checksum: 10/e703107c28e362d8d7b910bbcbfd371e640a3bb45ae157a362b5952c0030c0b6d4981140ec319b347bce7adc025dd7813da1ff908a945ac214d64f5402a51b96
+  languageName: node
+  linkType: hard
+
+"fs@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "fs@npm:0.0.2"
+  checksum: 10/3880da7d419d5a87d7127a9931ab533875a186ad0cd9bfd3334aa3fabe4f8bbfd3fedfb7c14a248a01181eaaea37e4141e6ff9f798eb48d04d7009f6b8008308
   languageName: node
   linkType: hard
 
@@ -14416,6 +14474,13 @@ __metadata:
     jwa: "npm:^2.0.0"
     safe-buffer: "npm:^5.0.1"
   checksum: 10/1d15f4cdea376c6bd6a81002bd2cb0bf3d51d83da8f0727947b5ba3e10cf366721b8c0d099bf8c1eb99eb036e2c55e5fd5efd378ccff75a2b4e0bd10002348b9
+  languageName: node
+  linkType: hard
+
+"jwt-decode@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "jwt-decode@npm:4.0.0"
+  checksum: 10/87b569e4a9a0067fb0d592bcf3b2ac3e638e49beee28620eeb07bef1b4470f4077dea68c15d191dd68e076846c3af8394be3bcaecffedc6e97433b221fdbbcf3
   languageName: node
   linkType: hard
 
