@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, CustomMenuItem, InvokeError, Manager, Menu, MenuItem, Submenu};
 mod plugins;
+mod fetch;
 
 fn main() {
     // Fix $PATH on MacOS and Linux to include the bashrc/zshrc
@@ -22,6 +23,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_environment_variable,
             plugins::extract_package_plugin_tarball,
+            fetch::fetch_from_api,
             allow_data_file_scope,
             read_relative_project_file
         ])

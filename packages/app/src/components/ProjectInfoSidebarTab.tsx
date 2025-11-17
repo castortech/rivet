@@ -1,4 +1,4 @@
-import { useMemo, type FC, useState } from 'react';
+import { useMemo, type FC, useState, useEffect } from 'react';
 import { InlineEditableTextfield } from '@atlaskit/inline-edit';
 import { ProjectPluginsConfiguration } from './ProjectPluginConfiguration';
 import { Field, Label } from '@atlaskit/form';
@@ -8,16 +8,17 @@ import Button from '@atlaskit/button';
 import Modal, { ModalTransition, ModalHeader, ModalTitle, ModalBody, ModalFooter } from '@atlaskit/modal-dialog';
 import { useToggle } from 'ahooks';
 import TextField from '@atlaskit/textfield';
-import { DataType, type DataValue } from '@ironclad/rivet-core';
+import { DataType, globalRivetNodeRegistry, type DataValue } from '@ironclad/rivet-core';
 import { produce } from 'immer';
 import Toggle from '@atlaskit/toggle';
 import { entries } from '../../../core/src/utils/typeSafety';
 import { css } from '@emotion/react';
-import { ProjectRevisions } from './ProjectRevisionList';
+import { ProjectRevisionsFB } from './ProjectRevisionListFB';
 import { useAtom, useAtomValue } from 'jotai';
 import { swallowPromise } from '../utils/syncWrapper';
 import { ProjectReferencesConfiguration } from './ProjectReferencesConfiguration';
 import { ProjectMCPConfiguration } from './ProjectMCPConfiguration';
+import { ProjectRevisions } from './ProjectRevisionList';
 
 const styles = css`
   .context-list {
@@ -78,6 +79,7 @@ export const ProjectInfoSidebarTab: FC = () => {
 
   const [projectEditContextModalOpen, toggleProjectEditContextModalOpen] = useToggle(false);
   const [editContextData, setEditContextData] = useState<ContextValue>();
+  const [hasAidonPlugin, setHasAidonPlugin] = useState(false);
 
   const graphOptions = useMemo(
     () => [
@@ -119,6 +121,12 @@ export const ProjectInfoSidebarTab: FC = () => {
   const sortedContext = useMemo(() => {
     return entries(projectContext).sort(([a], [b]) => a.localeCompare(b));
   }, [projectContext]);
+
+	useEffect(() => {
+		const plugins = globalRivetNodeRegistry.getPlugins();
+		const aidonPlugin = plugins.find( p => p.id === 'aidon');
+		setHasAidonPlugin(!!aidonPlugin);
+	}, [])
 
   return (
     <div css={styles} className="project-info-section">
@@ -200,7 +208,11 @@ export const ProjectInfoSidebarTab: FC = () => {
       </Field>
 
       <Label htmlFor="">Revisions</Label>
-      <ProjectRevisions />
+      {hasAidonPlugin ? (
+				<ProjectRevisionsFB />
+			) : (
+				<ProjectRevisions />
+			)}
     </div>
   );
 };
