@@ -13,7 +13,11 @@ export function useSaveProject() {
   const { testSuites } = useAtomValue(trivetState);
   const setOpenedProjects = useSetAtom(openedProjectsState);
 
-  async function saveProject() {
+	/**
+	*
+	* @returns data as string or void if saveAs (new) or failed
+	*/
+  async function saveProject(): Promise<string | void> {
     if (!loadedProject.loaded || !loadedProject.path) {
       return saveProjectAs();
     }
@@ -33,7 +37,7 @@ export function useSaveProject() {
     }, 500);
 
     try {
-      await ioProvider.saveProjectDataNoPrompt(newProject, { testSuites }, loadedProject.path);
+      const data = await ioProvider.saveProjectDataNoPrompt(newProject, { testSuites }, loadedProject.path);
 
       if (saving != null) {
         toast.dismiss(saving);
@@ -45,13 +49,14 @@ export function useSaveProject() {
         loaded: true,
         path: loadedProject.path,
       });
+			return data;
     } catch (cause) {
       clearTimeout(savingTimeout);
       toast.error('Failed to save project');
     }
   }
 
-  async function saveProjectAs() {
+  async function saveProjectAs(): Promise<void> {
     const savedGraph = saveGraph();
 
     const newProject = savedGraph

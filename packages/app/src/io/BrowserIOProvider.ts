@@ -35,7 +35,7 @@ export class BrowserIOProvider implements IOProvider {
     return fileHandle.name;
   }
 
-  async saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string): Promise<void> {
+  async saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string): Promise<string> {
     throw new Error('Function not supported in the browser');
   }
 

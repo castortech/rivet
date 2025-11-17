@@ -76,7 +76,7 @@ export class TauriIOProvider implements IOProvider {
     return undefined;
   }
 
-  async saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string) {
+  async saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string): Promise<string> {
     const data = serializeProject(project, {
       trivet: serializeTrivetData(testData),
     }) as string;
@@ -87,6 +87,7 @@ export class TauriIOProvider implements IOProvider {
     });
 
     await saveDatasetsFile(path, project);
+		return data;
   }
 
   async loadGraphData(callback: (graphData: NodeGraph) => void) {

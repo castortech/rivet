@@ -1,4 +1,4 @@
-import { type ChartNode, getPluginConfig, globalRivetNodeRegistry } from '@ironclad/rivet-core';
+import { getPluginConfig, globalRivetNodeRegistry, type ChartNode, type RivetPlugin } from '@ironclad/rivet-core';
 import { datasetProvider } from '../utils/globals';
 import { selectedExecutorState } from '../state/execution';
 import { type RivetUIContext } from '../../../core/src/model/RivetUIContext';
@@ -19,12 +19,17 @@ export function useGetRivetUIContext() {
   const graph = useAtomValue(graphState);
   const referencedProjects = useAtomValue(referencedProjectsState);
 
-  return useStableCallback(async ({ node }: { node?: ChartNode }) => {
+  return useStableCallback(async ({ node }: { node?: ChartNode | RivetPlugin }) => {
     let getPluginConfigFn: RivetUIContext['getPluginConfig'] = () => undefined;
     if (node) {
-      const nodePlugin = globalRivetNodeRegistry.getPluginFor(node?.type);
-      if (nodePlugin) {
-        getPluginConfigFn = (name) => getPluginConfig(nodePlugin, settings, name);
+      if ('type' in node) {
+        // ChartNode case
+        const nodePlugin = globalRivetNodeRegistry.getPluginFor(node.type);
+        if (nodePlugin) {
+          getPluginConfigFn = (name) => getPluginConfig(nodePlugin, settings, name);
+        }
+      } else { // RivetPlugin case
+        getPluginConfigFn = (name) => getPluginConfig(node, settings, name);
       }
     }
 
@@ -34,7 +39,7 @@ export function useGetRivetUIContext() {
       settings: await fillMissingSettingsFromEnvironmentVariables(settings, plugins),
       project,
       graph,
-      node,
+      node: node && 'type' in node ? node : undefined,
       getPluginConfig: getPluginConfigFn,
       nativeApi: new TauriNativeApi(),
       referencedProjects,

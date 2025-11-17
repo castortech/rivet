@@ -38,7 +38,7 @@ export class LegacyBrowserIOProvider implements IOProvider {
     return link.download;
   }
 
-  async saveProjectDataNoPrompt(_project: Project, _testData: TrivetData, _path: string): Promise<void> {
+  async saveProjectDataNoPrompt(_project: Project, _testData: TrivetData, _path: string): Promise<string> {
     throw new Error('Function not supported in the browser');
   }
 

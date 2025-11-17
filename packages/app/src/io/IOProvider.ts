@@ -6,7 +6,7 @@ export interface IOProvider {
 
   saveProjectData(project: Project, testData: TrivetData): Promise<string | undefined>;
 
-  saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string): Promise<void>;
+  saveProjectDataNoPrompt(project: Project, testData: TrivetData, path: string): Promise<string>;
 
   loadGraphData(callback: (graphData: NodeGraph) => void): Promise<void>;
 
