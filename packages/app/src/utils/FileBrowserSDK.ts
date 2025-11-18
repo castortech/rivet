@@ -435,11 +435,7 @@ export class FileBrowserSDK {
 		const url = `${this.apiBaseUrl}/api/users/${this.userInfo?.id}`
 		const options: FetchOptions = {
       method: 'POST',
-      headers: {
-        accept: '*/*',
-        'accept-language': 'en-US,en',
-        'content-type': 'application/json'
-      },
+      headers: this.getHeaders(),
 			body: JSON.stringify({
 				what: 'user',
 				which: ['sorting'],
