@@ -6,10 +6,12 @@ import { skippedMaxVersionState, updateModalOpenState, updateStatusState } from 
 import Button from '@atlaskit/button';
 import useAsyncEffect from 'use-async-effect';
 import { checkUpdate, installUpdate } from '@tauri-apps/api/updater';
+import { invoke } from '@tauri-apps/api'
+import { message } from '@tauri-apps/api/dialog';
+import { relaunch } from '@tauri-apps/api/process';
 import { getVersion } from '@tauri-apps/api/app';
 import { css } from '@emotion/react';
 import { useMarkdown } from '../hooks/useMarkdown';
-import { relaunch } from '@tauri-apps/api/process';
 import { syncWrapper } from '../utils/syncWrapper';
 
 const bodyStyle = css`
@@ -42,6 +44,37 @@ export const UpdateModal: FC = () => {
       setUpdateBody(manifest.body);
     }
   }, []);
+
+	// Check only on Windows
+	async function checkAndHandleAdmin() {
+		try {
+			const plat: string = await invoke('get_platform')
+			if (plat !== 'win32') return true
+		} catch (err) {
+			console.error('Platform check failed:', err)
+			return false  // Or assume non-Windows
+		}
+
+		try {
+			const isAdmin: boolean = await invoke('is_admin')
+			if (isAdmin) return true
+
+			await message('Updater requires admin privileges. Restart with "Run as administrator"',
+							{ title: 'Admin Required', type: 'warning' }
+			)
+			// const shouldRelaunch = await ask(
+			// 	'Updater requires admin privileges. Restart as admin?',
+			// 	{ title: 'Admin Required', type: 'warning' }
+			// )
+			// if (!shouldRelaunch) return false
+
+			// await relaunch()
+			return false
+		} catch (err) {
+			console.error('Admin check failed:', err)
+			return false
+		}
+	}
 
   const doUpdate = async () => {
     try {

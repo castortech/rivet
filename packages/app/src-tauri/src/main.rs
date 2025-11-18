@@ -23,6 +23,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_environment_variable,
             plugins::extract_package_plugin_tarball,
+            plugins::is_admin,
+						plugins::get_platform,
             fetch::fetch_from_api,
             allow_data_file_scope,
             read_relative_project_file
