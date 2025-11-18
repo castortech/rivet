@@ -161,7 +161,7 @@ export class FileBrowserSDK {
 
   async createFile(filePath: string): Promise<FileItem> {
 		{
-			const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(filePath)}?override=false`
+			const url = `${this.apiBaseUrl}/api/resources/${encodeURI(filePath)}?override=false`
 			const options: FetchOptions = {
 				method: 'POST',
 				headers: this.getHeaders()
@@ -169,7 +169,7 @@ export class FileBrowserSDK {
 			await this.tauriFetch(url, options)
 		}
 
-		const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(filePath)}`
+		const url = `${this.apiBaseUrl}/api/resources/${encodeURI(filePath)}`
 		const options: FetchOptions = {
 			method: 'GET',
 			headers: this.getHeaders()
@@ -188,7 +188,7 @@ export class FileBrowserSDK {
 
   async createFolder(folderPath: string): Promise<FileItem> {
 		{
-			const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(folderPath)}/?override=false`
+			const url = `${this.apiBaseUrl}/api/resources/${encodeURI(folderPath)}/?override=false`
 			const options: FetchOptions = {
 				method: 'POST',
 				headers: this.getHeaders()
@@ -197,7 +197,7 @@ export class FileBrowserSDK {
 			if (!this.isOk(resp.status)) throw new Error(`Error configuring create file op: ${resp.status}`)
 		}
 
-		const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(folderPath)}/`
+		const url = `${this.apiBaseUrl}/api/resources/${encodeURI(folderPath)}/`
 		const options: FetchOptions = {
 			method: 'GET',
 			headers: this.getHeaders()
@@ -215,7 +215,7 @@ export class FileBrowserSDK {
   }
 
   async deleteFile(filePath: string): Promise<boolean> {
-    const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(filePath)}`
+    const url = `${this.apiBaseUrl}/api/resources/${encodeURI(filePath)}`
     const options: FetchOptions = {
       method: 'DELETE',
       headers: this.getHeaders()
@@ -226,7 +226,7 @@ export class FileBrowserSDK {
   }
 
   async deleteFolder(folderPath: string): Promise<boolean> {
-    const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(folderPath)}/`
+    const url = `${this.apiBaseUrl}/api/resources/${encodeURI(folderPath)}/`
     const options: FetchOptions = {
       method: 'DELETE',
       headers: this.getHeaders()
@@ -242,7 +242,7 @@ export class FileBrowserSDK {
   ): Promise<UploadResult | undefined> {
     try {
       const fileName = `${file.name}_${Date.now()}`
-      const uploadUrl = `${this.apiBaseUrl}/api/tus/${folderPath}/${encodeURIComponent(fileName)}?override=false`
+      const uploadUrl = `${this.apiBaseUrl}/api/tus/${folderPath}/${encodeURI(fileName)}?override=false`
 
       // 1. init (create upload)
 			{
@@ -305,7 +305,7 @@ export class FileBrowserSDK {
   }
 
   async setFileContent(filePath: string, data:string): Promise<void> {
-		const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(filePath)}`
+		const url = `${this.apiBaseUrl}/api/resources/${encodeURI(filePath)}`
 		const options: FetchOptions = {
       method: 'PUT',
 			headers: this.getHeaders('text/plain;charset=UTF-8'),
@@ -316,7 +316,7 @@ export class FileBrowserSDK {
   }
 
 	async downloadFile(filePath: string, fileName:string): Promise<{ blob: Blob, contentType: string }> {
-		const origin = encodeURIComponent(`${filePath}/${fileName}`);
+		const origin = encodeURI(`${filePath}/${fileName}`);
 		const url = `${this.apiBaseUrl}/api/raw/${origin}`
 		const options: FetchOptions = {
       method: 'GET',
@@ -332,8 +332,8 @@ export class FileBrowserSDK {
   }
 
   async copyFile(fromFolderPath: string, fileName:string, toFolderPath: string): Promise<boolean> {
-		const origin = encodeURIComponent(`${fromFolderPath}/${fileName}`);
-		const destination = encodeURIComponent(`${toFolderPath}/${fileName}`);
+		const origin = encodeURI(`${fromFolderPath}/${fileName}`);
+		const destination = encodeURI(`${toFolderPath}/${fileName}`);
 		const rename: boolean = fromFolderPath === toFolderPath;
 		const url = `${this.apiBaseUrl}/api/resources/${origin}?action=copy&destination=${destination}&override=false&rename=${rename}`
 		const options: FetchOptions = {
@@ -347,7 +347,7 @@ export class FileBrowserSDK {
 
   async getSharableLink(filePath: string): Promise<ShareableLink | null> {
     // GET is not needed in browser version, just POST
-		const url = `${this.apiBaseUrl}/api/share${encodeURIComponent(filePath)}`
+		const url = `${this.apiBaseUrl}/api/share${encodeURI(filePath)}`
 		const options: FetchOptions = {
       method: 'POST',
 			headers: this.getHeaders()
@@ -370,8 +370,8 @@ export class FileBrowserSDK {
   }
 
   async renameFile(folderPath: string, fileName: string, newName: string): Promise<void> {
-    const filePath = encodeURIComponent(`${folderPath}/${fileName}`.replaceAll(/\/+/g, '/'))
-    const newFilePath = encodeURIComponent(`${folderPath}/${newName}`.replaceAll(/\/+/g, '/'))
+    const filePath = encodeURI(`${folderPath}/${fileName}`.replaceAll(/\/+/g, '/'))
+    const newFilePath = encodeURI(`${folderPath}/${newName}`.replaceAll(/\/+/g, '/'))
 		const url = `${this.apiBaseUrl}/api/resources/${filePath}?action=rename&destination=${newFilePath}`
 		const options: FetchOptions = {
       method: 'PATCH',
@@ -391,7 +391,7 @@ export class FileBrowserSDK {
 	}
 
   async getFileDetails(filePath: string): Promise<FileItem> {
-		const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(filePath)}`
+		const url = `${this.apiBaseUrl}/api/resources/${encodeURI(filePath)}`
 		const options: FetchOptions = {
 			method: 'GET',
 			headers: this.getHeaders()
@@ -409,7 +409,7 @@ export class FileBrowserSDK {
   }
 
   async getFilesInFolder(folderPath: string): Promise<FileResources> {
-		const url = `${this.apiBaseUrl}/api/resources/${encodeURIComponent(folderPath)}`
+		const url = `${this.apiBaseUrl}/api/resources/${encodeURI(folderPath)}`
 		const options: FetchOptions = {
 			method: 'GET',
 			headers: this.getHeaders()
