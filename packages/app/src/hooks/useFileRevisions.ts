@@ -177,7 +177,7 @@ export function useProjectRevisions() {
 				fileType = 'data';
 			}
 
-			if (timestamp && !isNaN(timestamp) && fileType) {
+			if (timestamp && !Number.isNaN(timestamp) && fileType) {
 				if (!timestampMap.has(timestamp)) {
 					timestampMap.set(timestamp, {
 						baseName,
@@ -230,9 +230,9 @@ export function useProjectRevisions() {
 			const { path, fileName } = getContextInfo();
 			const wsId = coerceTypeOptional(projectContext?.workspace_id?.value as DataValue, 'string');
 			const workspaceId = wsId && wsId.length > 0 ? wsId : undefined
-			const userName = fbSdk.isAdmin() ? undefined : fbSdk.getUserInfo()?.username
+			const fbUserId = fbSdk.isAdmin() ? undefined : fbSdk.getUserInfo()?.id
 
-			await aidonSdk.createModel(path, fileName, userName, workspaceId)
+			await aidonSdk.createModel(path, fileName, fbUserId, workspaceId)
 		} catch (error) {
       console.error('Create Aidon model failed:', error);
     }

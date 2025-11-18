@@ -35,7 +35,7 @@ export class AidonSDK {
 		}
 	}
 
-  async createModel(filePath: string, fileName: string, userName?: string, workspaceId?: string): Promise<void> {
+  async createModel(filePath: string, fileName: string, fbUserId?: number, workspaceId?: string): Promise<void> {
 		const url = `${this.apiBaseUrl}/api/rivet/publish`
 		const options: FetchOptions = {
 			method: 'POST',
@@ -43,7 +43,7 @@ export class AidonSDK {
 			body: JSON.stringify({
 				filePath,
 				fileName,
-				userName,
+				fbUserId,
 				workspaceId
 			})
 		}
