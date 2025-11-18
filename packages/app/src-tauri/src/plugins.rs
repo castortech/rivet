@@ -1,6 +1,7 @@
 use flate2::read::GzDecoder;
 use std::fs::File;
 use std::path::Path;
+use std::process::Command;
 use tar::Archive;
 use tauri::InvokeError;
 
@@ -25,21 +26,14 @@ pub fn get_platform() -> String {
 
 #[tauri::command]
 pub fn is_admin() -> Result<bool, String> {
-    use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
-    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    if cfg!(not(target_os = "windows")) {
+        return Ok(true)
+    }
 
-    unsafe {
-        let mut token = windows::Win32::Foundation::HANDLE::default();
-        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).is_err() {
-            return Err("Failed to open process token".to_string());
-        }
-
-        let mut elevation = TOKEN_ELEVATION::default();
-        let mut size = std::mem::size_of::<TOKEN_ELEVATION>() as u32;
-        if GetTokenInformation(token, TokenElevation, Some(&mut elevation as *mut _ as *mut _), size, &mut size).is_err() {
-            return Err("Failed to get token info".to_string());
-        }
-
-        Ok(elevation.TokenIsElevated != 0)
+    match Command::new("net")
+        .arg("session")
+        .output() {
+        Ok(output) => Ok(output.status.success()),
+        Err(e) => Err(e.to_string()),
     }
 }
