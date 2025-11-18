@@ -5,7 +5,7 @@
   },
   "name": "@alpic80/rivet-app",
   "repository": "https://github.com/ironclad/rivet",
-  "version": "1.1.0-aidon.5",
+  "version": "1.1.0-aidon.6",
   "private": true,
   "license": "MIT",
   "type": "module",
