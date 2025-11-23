@@ -589,6 +589,7 @@ const RAW_RUNTIME_STATE =
           ["core-js", "npm:3.46.0"],\
           ["csv-parse", "npm:5.6.0"],\
           ["csv-stringify", "npm:6.6.0"],\
+          ["dayjs", "npm:1.11.19"],\
           ["emittery", "npm:1.1.0"],\
           ["enquirer", "npm:2.4.1"],\
           ["esbuild", "npm:0.19.5"],\
@@ -14672,6 +14673,13 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/dayjs-npm-1.11.13-d478bb9479-7374d63ab1.zip/node_modules/dayjs/",\
         "packageDependencies": [\
           ["dayjs", "npm:1.11.13"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:1.11.19", {\
+        "packageLocation": "./.yarn/cache/dayjs-npm-1.11.19-7112eeb750-185b820d68.zip/node_modules/dayjs/",\
+        "packageDependencies": [\
+          ["dayjs", "npm:1.11.19"]\
         ],\
         "linkType": "HARD"\
       }]\
