@@ -32,11 +32,12 @@ export type ChatAidonNode = ChartNode<'chatAidon', ChatNodeData>;
 
 //comes from Chatbot
 interface SchemaDetail {
+	// toolId: string
   title: string
   description: string
   url: string
   headers: string
-  routeMap:  Record<string, string>
+  routeMap: Record<string, string>
   requestInBody: boolean
 }
 
@@ -109,7 +110,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 		return path;
 	}
 
-	async callToolGet(parsedArgs: any, schemaDetail: SchemaDetail, path: string, data: {}) {
+	async callToolGet(schemaDetail: SchemaDetail, path: string, parsedArgs: any, data: {}) {
 		const queryParams = new URLSearchParams(
 			parsedArgs.parameters
 		).toString();
@@ -147,9 +148,7 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 
 		// Check if custom headers are set and are of type string
 		if (customHeaders && typeof customHeaders === "string") {
-			const parsedCustomHeaders = JSON.parse(customHeaders) as Record<
-				string, string
-			>;
+			const parsedCustomHeaders = JSON.parse(customHeaders) as Record<string, string>;
 
 			headers = {
 				...headers,
@@ -158,7 +157,6 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 		}
 
 		const fullUrl = schemaDetail.url + path;
-
 		const bodyContent = parsedArgs.requestBody ?? parsedArgs;
 
 		const requestInit = {
@@ -183,10 +181,13 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
   async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
 		//make sure not to include functions if we have no way to run them after.
 		inputs = this.removeInvalidInputs(inputs);
+		// const configData = this.data
+		// configData.frequencyPenalty = 2;
 
 		// Call the parent class's process method to do its job
 		let outputs = await super.process(inputs, context);
 
+		//Now check if the LLM wants us to do some tool calling
 		const funcCallOutput = outputs['function-call' as PortId] ?? outputs['function-calls' as PortId];
     const funcCalls = funcCallOutput?.type === 'object[]'
          ? funcCallOutput.value
@@ -212,15 +213,13 @@ class ChatAidonNodeImpl extends ChatNodeImpl {
 
 				const schemaDetail = this.convertToolSchemaToSchemaDetail(toolSchema);
 				const path = this.extractPath(schemaDetail, functionCall.name, functionCall.arguments);
-
-        // Determine if the request should be in the body or as a query
         let data = {};
 
-        if (schemaDetail.requestInBody) {
-          // If the type is set to body
+        // Determine if the request should be in the body or as a query
+        if (schemaDetail.requestInBody) { // If the type is set to body
           data = await this.callToolPost(schemaDetail, path, functionCall.arguments, data);
         } else { // If the type is set to query
-          data = await this.callToolGet(functionCall.arguments, schemaDetail, path, data);
+          data = await this.callToolGet(schemaDetail, path, functionCall.arguments, data);
         }
 
 				(messages!['value'] as ChatMessage[]).push({
