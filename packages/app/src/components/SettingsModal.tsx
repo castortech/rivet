@@ -1,4 +1,4 @@
-import { type FC, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { atom, useAtom, useAtomValue } from 'jotai';
 import {
   checkForUpdatesState,
@@ -33,6 +33,8 @@ import { DEFAULT_CHAT_NODE_TIMEOUT } from '../../../core/src/utils/defaults';
 import useAsyncEffect from 'use-async-effect';
 import { getVersion } from '@tauri-apps/api/app';
 import { swallowPromise } from '../utils/syncWrapper';
+import { CONFIGURED, useProjectRevisions, type VersionHistoryItem } from '../hooks/useFileRevisions.js';
+import { VersionsTableBody } from './SharedProjectModal.js';
 
 interface SettingsModalProps {}
 
@@ -52,7 +54,7 @@ const modalBody = css`
   }
 `;
 
-type DefaultPages = 'general' | 'openai' | 'plugins' | 'updates';
+type DefaultPages = 'general' | 'openai' | 'plugins' | 'updates' | 'shared';
 
 type Pages = DefaultPages | string;
 
@@ -128,6 +130,9 @@ export const SettingsModal: FC<SettingsModalProps> = () => {
                       <ButtonItem isSelected={page === 'updates'} onClick={() => setPage('updates')}>
                         Updates
                       </ButtonItem>
+                      <ButtonItem isSelected={page === 'shared'} onClick={() => setPage('shared')}>
+                        Shared Projects
+                      </ButtonItem>
                       <CustomPluginsTabs page={page} />
                     </div>
                   </NavigationContent>
@@ -139,6 +144,7 @@ export const SettingsModal: FC<SettingsModalProps> = () => {
                   .with('openai', () => <OpenAiSettingsPage />)
                   .with('plugins', () => <PluginsSettingsPage />)
                   .with('updates', () => <UpdatesSettingsPage />)
+                  .with('shared', () => <SharedProjectsSettingsPage />)
                   .with(P.string, (id) => customPluginsPages[id])
                   .exhaustive()}
               </main>
@@ -679,4 +685,43 @@ export const UpdatesSettingsPage: FC = () => {
       )}
     </div>
   );
+};
+
+export const SharedProjectsSettingsPage: FC = () => {
+	const [sharedProjects, setSharedProjects] = useState<VersionHistoryItem[]>([])
+
+	const {
+		fbConfig,
+		currentVersion,
+		formatRevisionDate,
+		getSharedProjects,
+		downloadVersion
+	} = useProjectRevisions();
+
+	useEffect(() => {
+		const init = async () => {
+			try {
+				const sharedProjects = await getSharedProjects();
+				setSharedProjects(sharedProjects)
+			} catch (error) {
+				console.error(`Error authenticating with FileBrowser`);
+			}
+		};
+		init();
+	}, [currentVersion])  //even if currentVersion is not used per se, it makes sure that the sdk is ready
+
+	return (
+		<>
+			{fbConfig === CONFIGURED ? (
+				<VersionsTableBody
+					mode={'shared'}
+					versions={sharedProjects}
+					onDownload={(version, project) => void downloadVersion(version, project)}
+					formatRevisionDate = {formatRevisionDate}
+				/>
+			) : (
+				<div>{fbConfig}</div>
+			)}
+		</>
+	)
 };

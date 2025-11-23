@@ -35,6 +35,21 @@ export class AidonSDK {
 		}
 	}
 
+  async getUser() {
+		const url = `${this.apiBaseUrl}/api/rivet/getUser`
+		const options: FetchOptions = {
+			method: 'GET',
+			headers: this.getHeaders()
+		}
+		const resp = await this.tauriFetch(url, options)
+		if (!this.isOk(resp.status)) throw new Error(`Error getting user info from Aidon: ${resp.status}`)
+		try {
+			return JSON.parse(resp.body) as { fbUrl: string, fbUser: string, fbPassword: string }
+		} catch (error) {
+			this.handleError(error, `Failed to parse user info:`)
+		}
+  }
+
   async createModel(filePath: string, fileName: string, fbUserId?: number, workspaceId?: string): Promise<void> {
 		const url = `${this.apiBaseUrl}/api/rivet/publish`
 		const options: FetchOptions = {

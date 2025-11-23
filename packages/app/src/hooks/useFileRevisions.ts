@@ -19,14 +19,17 @@ export interface VersionedFileSet {
 }
 
 export interface VersionHistoryItem {
+	baseName: string;           // "imagemakerv3"
   version: number;            // 10, 9, 8... (descending)
   revisedAt: number;          // timestamp
   projectFile?: FileItem;     // optional project file
   dataFile?: FileItem;        // optional data file
 }
 
+export const NOT_PUBLISHED = 'Not published';
+export const CONFIGURED = 'Configured';
+
 export function useProjectRevisions() {
-	const NOT_PUBLISHED = 'Not published';
   const [currentVersion, setCurrentVersion] = useState<string>(NOT_PUBLISHED);
 
 	const projState = useAtomValue(loadedProjectState);
@@ -34,13 +37,13 @@ export function useProjectRevisions() {
 	const [projectContext] = useAtom(projectContextState(project.metadata.id));
 	const [aidonSdk, setAidonSdk] = useState<AidonSDK | undefined>(undefined);
 	const [fbSdk, setFbSdk] = useState<FileBrowserSDK | undefined>(undefined);
-  const [hasFBContext, setHasFBContext] = useState(false);
+  const [fbConfig, setFbConfig] = useState('Plugin not configured');
 
 	const { saveProject } = useSaveProject();
 	const getUIContext = useGetRivetUIContext();
 
 	useEffect(() => {
-	  setHasFBContext(!!fbSdk);
+	  setFbConfig(fbSdk ? CONFIGURED : (aidonSdk ? 'Not in Rivet group' : 'Plugin not configured'));
 	}, [fbSdk, projectContext])
 
 	useEffect(() => {
@@ -69,9 +72,6 @@ export function useProjectRevisions() {
 				throw new Error("Aidon plugin not found");
 			}
 			const context = await getUIContext({node: aidonPlugin});
-			const fbUrl = context.getPluginConfig('fileBrowserURL') || 'https://ai-fb.aidon.ai';
-			const fbUser = context.getPluginConfig('fileBrowserUsername');
-			const fbPass = context.getPluginConfig('fileBrowserPassword');
 			const aidonUrl = context.getPluginConfig('aidonURL') || 'https://app.aidon.ai';
 			const aidonKey = context.getPluginConfig('aidonKey');
 
@@ -79,10 +79,16 @@ export function useProjectRevisions() {
 				throw new Error("Aidon API key not found, configure in plugin");
 			}
 
-			fbSdk ??= new FileBrowserSDK(fbUrl);
+			aidonSdk ??= new AidonSDK(aidonUrl, aidonKey);
+			if (!aidonSdk) {
+				throw new Error("Failed to create Aidon SDK");
+			}
 
-			if (fbSdk && fbUser && fbPass) {
-				await fbSdk.authenticate(fbUser, fbPass)
+			const { fbUrl, fbUser, fbPassword } = await aidonSdk.getUser()
+
+			if (fbUrl && fbUser && fbPassword) {
+				fbSdk ??= new FileBrowserSDK(fbUrl);
+				await fbSdk.authenticate(fbUser, fbPassword)
 						.then(() => {
 						console.log("Authenticated successfully");
 					})
@@ -90,11 +96,10 @@ export function useProjectRevisions() {
 						console.error("Authentication failed:", err);
 						throw new Error("FileBrowser Authentication failed");
 					});
+				return { fbSdk , aidonSdk };
 			}
 
-			aidonSdk ??= new AidonSDK(aidonUrl, aidonKey);
-
-			return { fbSdk , aidonSdk };
+			throw new Error("Failed to get user from Aidon");
 		} catch (err) {
 			throw err;
 		}
@@ -103,8 +108,8 @@ export function useProjectRevisions() {
 	const getContextInfo = (sdk?:FileBrowserSDK): { path: string, fileName: string } => {
 		sdk ??= fbSdk;
 
-		if (!sdk || !projState.loaded || !projState.path) {
-			return {path:'', fileName:''}; //never called without testing these first
+		if (!sdk || !projState.loaded || !projState.path) {  //never called without testing these first
+			return {path: '', fileName: ''};
 		}
 		const fileName = projState.path.split(/[/\\]/).pop() ?? ''
 		let path = '';
@@ -113,6 +118,20 @@ export function useProjectRevisions() {
 			path += '/Rivet_Files';
 		}
 		return { path, fileName}
+	}
+
+	const getPath = (sdk?:FileBrowserSDK): string => {
+		sdk ??= fbSdk;
+
+		if (!sdk) {  //never called without testing these first
+			return '';
+		}
+		let path = '';
+
+		if (sdk.isAdmin()) { //check if admin and if so add 'Rivet_Files' to the path
+			path += '/Rivet_Files';
+		}
+		return path;
 	}
 
 	const formatRevisionDate = (value?: string | number | Date): string => {
@@ -198,6 +217,49 @@ export function useProjectRevisions() {
 			.sort((a, b) => b.timestamp - a.timestamp);
 	}
 
+	const groupProjectsByName = (
+		allProjects: FileItem[]
+	): VersionedFileSet[] => {
+		const nameMap = new Map<string, VersionedFileSet>();
+
+		const projectSuffix = `.rivet-project`;
+		const dataSuffix = `.rivet-data`;
+
+		for (const item of allProjects) {
+			if (item.isDir) {  //skip folders for now
+				continue
+			}
+			const baseName: string = item.name.split(/[/\\]/).pop() ?? '';
+			const timestamp: number = new Date(item.modified).getTime();
+			let fileType: 'project' | 'data' | null = null;
+
+			if (item.name.endsWith(projectSuffix)) {
+				fileType = 'project';
+			} else if (item.name.endsWith(dataSuffix)) {
+				fileType = 'data';
+			}
+
+			if (fileType) {
+				if (!nameMap.has(baseName)) {
+					nameMap.set(baseName, {
+						baseName,
+						timestamp,
+					});
+				}
+
+				const versionSet = nameMap.get(baseName)!;
+				if (fileType === 'project') {
+					versionSet.projectFile = item;
+				} else {
+					versionSet.dataFile = item;
+				}
+			}
+		}
+
+		return Array.from(nameMap.values())
+			.sort((a, b) => a.baseName.localeCompare(b.baseName));
+	}
+
 	const cleanupOldVersions = async (hasDataset: boolean) => {
 		if (!fbSdk || !projState.loaded || !projState.path) {
 			return;
@@ -230,7 +292,7 @@ export function useProjectRevisions() {
 			const { path, fileName } = getContextInfo();
 			const wsId = coerceTypeOptional(projectContext?.workspace_id?.value as DataValue, 'string');
 			const workspaceId = wsId && wsId.length > 0 ? wsId : undefined
-			const fbUserId = fbSdk.isAdmin() ? undefined : fbSdk.getUserInfo()?.id
+			const fbUserId = fbSdk.getUserInfo()?.id
 
 			await aidonSdk.createModel(path, fileName, fbUserId, workspaceId)
 		} catch (error) {
@@ -303,6 +365,28 @@ export function useProjectRevisions() {
 		return undefined;
 	};
 
+	async function getSharedProjects(): Promise<VersionHistoryItem[]> {
+		if (!fbSdk || !aidonSdk || !projState.loaded || !projState.path) {
+			return [];
+		}
+
+		if (!await fbSdk.ensureValidToken()) {
+			await authenticateApiSdks(fbSdk, aidonSdk);
+		}
+
+		const path = getPath();
+		const allVersions = await fbSdk.getFilesInFolder(`${path}`);
+		const versions = groupProjectsByName(allVersions.items);
+
+		return versions.map((v, index) => ({
+			baseName: v.baseName,
+			version: versions.length - index,
+			revisedAt: v.timestamp,
+			projectFile: v.projectFile,
+			dataFile: v.dataFile,
+		}));
+	}
+
 	async function getVersionHistory(): Promise<VersionHistoryItem[]> {
 		if (!fbSdk || !aidonSdk || !projState.loaded || !projState.path) {
 			return [];
@@ -317,6 +401,7 @@ export function useProjectRevisions() {
 		const versions = groupVersionsByTimestamp(allVersions.items, fileName);
 
 		return versions.slice(0, 10).map((v, index) => ({
+			baseName: v.baseName,
 			version: versions.length - index,
 			revisedAt: v.timestamp,
 			projectFile: v.projectFile,
@@ -369,11 +454,12 @@ export function useProjectRevisions() {
 		cleanupOldVersions,
 		formatRevisionDate,
 		getCurrentVersion,
+		getSharedProjects,
 		getVersionHistory,
     groupVersionsByTimestamp,
 		publishProject,
 		downloadVersion,
 		currentVersion,
-		hasFBContext
+		fbConfig
   };
 }
