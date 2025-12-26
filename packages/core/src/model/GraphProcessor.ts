@@ -789,7 +789,7 @@ export class GraphProcessor {
         throw new Error('Cannot process graph while already processing');
       }
 
-			console.info(`Process graph called. Context:${context}, Inputs: ${JSON.stringify(inputs)}, Context Values: ${JSON.stringify(contextValues)}`);
+			this.#emitTraceEvent(`Process graph called. Context:${JSON.stringify(context)}, Inputs: ${JSON.stringify(inputs)}, Context Values: ${JSON.stringify(contextValues)}`);
 
       this.#initProcessState();
 
@@ -804,12 +804,12 @@ export class GraphProcessor {
         });
       }
 
-			console.info(`Process graph calling loadProjectReferences`);
+			this.#emitTraceEvent(`Process graph calling loadProjectReferences`);
       await this.#loadProjectReferences();
-			console.info(`Process graph called loadProjectReferences`);
+			this.#emitTraceEvent(`Process graph called loadProjectReferences`);
 
       this.#preprocessGraph();
-			console.info(`Process graph called preprocessGraph`);
+			this.#emitTraceEvent(`Process graph called preprocessGraph`);
 
       if (!this.#isSubProcessor) {
         await this.#emitter.emit('start', {
