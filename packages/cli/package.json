@@ -2,7 +2,7 @@
   "name": "@alpic80/rivet-cli",
   "license": "MIT",
   "repository": "https://github.com/castortech/rivet",
-  "version": "1.24.2-aidon.8",
+  "version": "1.24.2-aidon.9",
   "src": "bin/cli.ts",
   "bin": {
     "rivet": "bin/cli.js"
@@ -27,8 +27,8 @@
     "@alpic80/rivet-core": "workspace:^",
     "@alpic80/rivet-node": "workspace:^",
     "@hono/node-server": "^1.13.8",
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.8",
-    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.8",
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.9",
+    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.9",
     "@types/dotenv": "^8.2.3",
     "chalk": "^5.4.1",
     "didyoumean2": "^7.0.4",
