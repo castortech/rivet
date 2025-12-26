@@ -63,7 +63,10 @@ export function useProjectRevisions() {
 		init();
 	}, [])
 
-	const authenticateApiSdks = async (fbSdk?:FileBrowserSDK, aidonSdk?:AidonSDK): Promise<{ fbSdk:FileBrowserSDK, aidonSdk:AidonSDK}> => {
+	const authenticateApiSdks = async (
+		fbSdk?:FileBrowserSDK,
+		aidonSdk?:AidonSDK
+	): Promise<{ fbSdk:FileBrowserSDK, aidonSdk:AidonSDK}> => {
 		try {
 			const plugins = globalRivetNodeRegistry.getPlugins();
 			const aidonPlugin = plugins.find( p => p.id === 'aidon');
@@ -76,11 +79,14 @@ export function useProjectRevisions() {
 			const aidonKey = context.getPluginConfig('aidonKey');
 
 			if (!aidonKey) {
+				toast.error('Aidon API key not found, configure in plugin');
+				console.error("Aidon API key not found, configure in plugin");
 				throw new Error("Aidon API key not found, configure in plugin");
 			}
 
 			aidonSdk ??= new AidonSDK(aidonUrl, aidonKey);
 			if (!aidonSdk) {
+				console.error("Failed to create Aidon SDK");
 				throw new Error("Failed to create Aidon SDK");
 			}
 
@@ -93,6 +99,7 @@ export function useProjectRevisions() {
 						console.log("Authenticated successfully");
 					})
 					.catch((err: unknown) => {
+						toast.error('Authentication failed');
 						console.error("Authentication failed:", err);
 						throw new Error("FileBrowser Authentication failed");
 					});
@@ -235,7 +242,8 @@ export function useProjectRevisions() {
 
 			if (item.name.endsWith(projectSuffix)) {
 				fileType = 'project';
-			} else if (item.name.endsWith(dataSuffix)) {
+			}
+			else if (item.name.endsWith(dataSuffix)) {
 				fileType = 'data';
 			}
 
@@ -250,7 +258,8 @@ export function useProjectRevisions() {
 				const versionSet = nameMap.get(baseName)!;
 				if (fileType === 'project') {
 					versionSet.projectFile = item;
-				} else {
+				}
+				else {
 					versionSet.dataFile = item;
 				}
 			}
@@ -296,6 +305,7 @@ export function useProjectRevisions() {
 
 			await aidonSdk.createModel(path, fileName, fbUserId, workspaceId)
 		} catch (error) {
+			toast.error('Create Aidon model failed');
       console.error('Create Aidon model failed:', error);
     }
 	}
@@ -306,7 +316,10 @@ export function useProjectRevisions() {
 		}
 
 		if (!await fbSdk.ensureValidToken()) {
-			await authenticateApiSdks(fbSdk, aidonSdk);
+			await authenticateApiSdks(fbSdk, aidonSdk).catch((err: unknown) => {
+				toast.error('Authentication failed, please check your credentials');
+				console.error("Error authenticating with FileBrowser:", err);
+			});
 		}
 
 		const data = await saveProject();
@@ -319,12 +332,22 @@ export function useProjectRevisions() {
 
 			// Step 1: Copy current version to archive
 			if (currentVersion !== NOT_PUBLISHED) {
-				await archiveCurrentVersion(timestamp, hasDataset);
+				await archiveCurrentVersion(timestamp, hasDataset).catch((err: unknown) => {
+					toast.error('Failed to archive current version');
+					console.error("Failed to archive current version:", err);
+				});
 			}
 
 			// Step 2: Upload new version to user root (replaces current)
-			await fbSdk.createFile(`${path}/${fileName}`);  //won't overwrite if exist
-			await fbSdk.setFileContent(`${path}/${fileName}`, data);
+			await fbSdk.createFile(`${path}/${fileName}`).catch((err: unknown) => {
+				toast.error('Failed to create file');
+				console.error("Failed to create file:", err);
+			});  //won't overwrite if exist
+
+			await fbSdk.setFileContent(`${path}/${fileName}`, data).catch((err: unknown) => {
+				toast.error('Failed to set file content');
+				console.error("Failed to set file content:", err);
+			});
 
 			//Update current version
 			const currVersion = await getCurrentVersion(fbSdk, aidonSdk);
@@ -333,15 +356,27 @@ export function useProjectRevisions() {
 			}
 
 			if (hasDataset) {
-				await fbSdk.createFile(`${path}/${dataFileName}`);  //won't overwrite if exist
-				await fbSdk.setFileContent(`${path}/${dataFileName}`, datasetData!);
+				await fbSdk.createFile(`${path}/${dataFileName}`).catch((err: unknown) => {
+					toast.error('Failed to create data file');
+					console.error("Failed to create data file:", err);
+				});  //won't overwrite if exist
+				await fbSdk.setFileContent(`${path}/${dataFileName}`, datasetData!).catch((err: unknown) => {
+					toast.error('Failed to set data file content');
+					console.error("Failed to set data file content:", err);
+				});
 			}
 
 			// Step 3: Cleanup old versions (keep max 10)
-			await cleanupOldVersions(hasDataset);
+			await cleanupOldVersions(hasDataset).catch((err: unknown) => {
+					toast.error('Failed to cleanup old versions');
+					console.error("Failed to cleanup old versions:", err);
+				});
 
 			// Step 4: Create model in Aidon if not already there
-			await createModelInAidon()
+			await createModelInAidon().catch((err: unknown) => {
+				toast.error('Failed to create model in Aidon');
+				console.error("Failed to create model in Aidon:", err);
+			})
 		}
 	};
 

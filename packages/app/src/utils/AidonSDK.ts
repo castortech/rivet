@@ -25,7 +25,10 @@ export class AidonSDK {
   }
 
 	private getHeaders(contentType = 'application/json'): Record<string, string> {
-		if (!this.apiKey) throw new Error('Authenticate first')
+		if (!this.apiKey) {
+			console.log('No API key provided');
+			throw new Error('Authenticate first');
+		}
 		return {
 			'accept': '*/*',
 			'Authorization': `Bearer ${this.apiKey}`,
@@ -42,11 +45,14 @@ export class AidonSDK {
 			headers: this.getHeaders()
 		}
 		const resp = await this.tauriFetch(url, options)
-		if (!this.isOk(resp.status)) throw new Error(`Error getting user info from Aidon: ${resp.status}`)
+		if (!this.isOk(resp.status)) {
+			console.error(`Error getting user info from Aidon: ${resp.status}`);
+			throw new Error(`Error getting user info from Aidon: ${resp.status}`);
+		}
 		try {
 			return JSON.parse(resp.body) as { fbUrl: string, fbUser: string, fbPassword: string }
 		} catch (error) {
-			this.handleError(error, `Failed to parse user info:`)
+			this.handleError(error, `Failed to parse user info:`);
 		}
   }
 
@@ -63,7 +69,10 @@ export class AidonSDK {
 			})
 		}
 		const resp = await this.tauriFetch(url, options)
-		if (!this.isOk(resp.status)) throw new Error(`Error creating Aidon Model: ${resp.status}`)
+		if (!this.isOk(resp.status)) {
+			console.error(`Error creating Aidon Model: ${resp.status}`);
+			throw new Error(`Error creating Aidon Model: ${resp.status}`);
+		}
   }
 
 	private isOk(status: number): boolean {
@@ -74,6 +83,7 @@ export class AidonSDK {
     let message = context
     if (error instanceof Error) message += ` - ${error.message}`
     // Optionally log more, but don't leak sensitive info
+		console.error(`Error creating Aidon Model: ${message}`);
     throw new Error(message)
   }
 
