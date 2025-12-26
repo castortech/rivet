@@ -188,7 +188,7 @@ export class HttpCallNodeImpl extends NodeImpl<HttpCallNode> {
       } ${
         this.data.useHeadersInput
           ? '\nHeaders: (Using Input)'
-          : this.data.headers.trim()
+          : this.data.headers?.trim()
             ? `\nHeaders: ${this.data.headers}`
             : ''
       }${this.data.useBodyInput ? '\nBody: (Using Input)' : this.data.body.trim() ? `\nBody: ${this.data.body}` : ''}${
@@ -229,7 +229,7 @@ export class HttpCallNodeImpl extends NodeImpl<HttpCallNode> {
       } else {
         headers = coerceType(headersInput, 'object') as Record<string, string>;
       }
-    } else if (this.data.headers.trim()) {
+    } else if (this.data.headers?.trim()) {
       headers = JSON.parse(this.data.headers);
     }
 
