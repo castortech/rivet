@@ -241,15 +241,27 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 				return c.text('Configured with projects-root-dir which requires a project file to be specified in URL', 400);
 			}
 
+			// Capture all headers as an object
+			const headers: Record<string, string> = {}
+			c.req.raw.headers.forEach((value, key) => {
+				headers[key] = value
+			})
+
       const project = args.dev ? await loadProjectFromFile(projectFilePath) : initialProject!;
       const inputText = await c.req.text();
-			return await processGraph({ project, inputText });
+			return await processGraph({ project, headers, inputText });
     });
 
     if (args.allowSpecifyingGraphId || args.projectsRootDir) {
 			app.post('/*', async (c) => {
 				const full = decodeURIComponent(c.req.path.slice(1)) // remove leading slash
 				const parts = full.split(':')
+
+				// Capture all headers as an object
+				const headers: Record<string, string> = {}
+				c.req.raw.headers.forEach((value, key) => {
+					headers[key] = value
+				})
 
 				let graphId: GraphId | undefined
 				let graphFile: string | undefined
@@ -288,7 +300,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 				}
 
 				const inputText = await c.req.text();
-				return await processGraph({ project, inputText, graphId });
+				return await processGraph({ project, headers, inputText, graphId });
       });
     }
 
@@ -352,6 +364,7 @@ function createProcessGraph(ctx: ServerContext) {
   return async (opts: {
     project: Project
     graphId?: GraphId
+		headers: Record<string, string>
     inputText: string
   }): Promise<Response> => {
 		let localCtx = { ...ctx }
@@ -359,11 +372,15 @@ function createProcessGraph(ctx: ServerContext) {
 		let runParams: Record<string, LooseDataValue> = {};
 
   	if (opts.inputText.trim()) {
+			console.log(`Parsing input text: ${opts.inputText}`);
     	const parsed = JSON.parse(opts.inputText);
 
     	if (typeof parsed !== 'object') {
       	throw new Error('Inputs must be an object');
     	}
+
+			//pass in the header if needed
+			inputs.headers = JSON.stringify(opts.headers);
 
 			if ('runParams' in parsed) {
     		runParams = parsed['runParams'] as Record<string, LooseDataValue>;
