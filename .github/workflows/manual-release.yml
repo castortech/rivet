@@ -9,8 +9,8 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     strategy:
       matrix:
-        platform: [windows-latest, macos-latest, ubuntu-24.04]
-#        platform: [windows-latest, macos-latest]
+#        platform: [windows-latest, macos-latest, ubuntu-24.04]
+        platform: [windows-latest, macos-latest]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
