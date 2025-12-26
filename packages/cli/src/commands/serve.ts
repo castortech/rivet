@@ -225,6 +225,8 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 				args.dev && `Dev:${chalk.bold.white(args.dev)}`,
 				args.graph && `Graph:${chalk.bold.white(args.graph)}`,
 				args.allowSpecifyingGraphId && `AllowSpecifyingGraphId:${chalk.bold.white(args.allowSpecifyingGraphId)}`,
+				args.logActivity && `LogActivity:${chalk.bold.white(args.logActivity)}`,
+				args.logTrace && `LogTrace:${chalk.bold.white(args.logTrace)}`,
 				args.logRequests && `LogRequests:${chalk.bold.white(args.logRequests)}`
 			].filter(Boolean).join(', ')
 
