@@ -40,7 +40,7 @@ import type { NodeRegistration } from './NodeRegistration.js';
 import { getPluginConfig } from '../utils/index.js';
 import { GptTokenizerTokenizer } from '../integrations/GptTokenizerTokenizer.js';
 
- 
+
 import { IsomorphicCodeRunner } from '../integrations/CodeRunner.js';
 
 // CJS compatibility, gets default.default for whatever reason
@@ -789,6 +789,8 @@ export class GraphProcessor {
         throw new Error('Cannot process graph while already processing');
       }
 
+			console.info(`Process graph called. Context:${context}, Inputs: ${JSON.stringify(inputs)}, Context Values: ${JSON.stringify(contextValues)}`);
+
       this.#initProcessState();
 
       this.#context = context;
@@ -802,9 +804,12 @@ export class GraphProcessor {
         });
       }
 
+			console.info(`Process graph calling loadProjectReferences`);
       await this.#loadProjectReferences();
+			console.info(`Process graph called loadProjectReferences`);
 
       this.#preprocessGraph();
+			console.info(`Process graph called preprocessGraph`);
 
       if (!this.#isSubProcessor) {
         await this.#emitter.emit('start', {

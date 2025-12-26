@@ -227,6 +227,7 @@ export class SubGraphNodeImpl extends NodeImpl<SubGraphNode> {
 
       return outputs;
     } catch (err) {
+			console.error(`Error Processing subgraph: ${getError(err).message}`);
       if (!this.data.useErrorOutput) {
         throw err;
       }
