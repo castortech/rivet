@@ -11,6 +11,9 @@ export interface MCPBaseNodeData {
   serverUrl?: string;
   serverId?: string;
 
+  headers: string;
+  useHeadersInput?: boolean;
+
   // Input toggles
   useNameInput?: boolean;
   useVersionInput?: boolean;
@@ -45,6 +48,14 @@ export const getMCPBaseInputs = (data: MCPBaseNodeData) => {
       id: 'serverUrl' as PortId,
       title: 'Server URL',
       description: 'The endpoint URL for the MCP server',
+    });
+  }
+
+  if (data.transportType === 'http' && data.useHeadersInput) {
+    inputs.push({
+      dataType: 'object',
+      id: 'headers' as PortId,
+      title: 'Headers',
     });
   }
 
@@ -103,6 +114,13 @@ export const getMCPBaseEditors = async (
       dataKey: 'serverUrl',
       useInputToggleDataKey: 'useServerUrlInput',
       helperMessage: 'The endpoint URL for the MCP server to connect',
+    },
+		{
+      type: 'code',
+      label: 'Headers',
+      dataKey: 'headers',
+      useInputToggleDataKey: 'useHeadersInput',
+      language: 'json',
     });
   } else if (data.transportType === 'stdio') {
     const serverOptions = await getServerOptions(context);

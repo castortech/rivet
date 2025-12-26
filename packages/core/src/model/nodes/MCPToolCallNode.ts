@@ -10,7 +10,7 @@ import { NodeImpl, type NodeUIData } from '../NodeImpl.js';
 import { nodeDefinition } from '../NodeDefinition.js';
 import { type Inputs, type Outputs } from '../GraphProcessor.js';
 
-import { type InternalProcessContext } from '../../index.js';
+import { coerceType, type InternalProcessContext } from '../../index.js';
 
 import { MCPError, MCPErrorType, type MCP } from '../../integrations/mcp/MCPProvider.js';
 import { coerceTypeOptional } from '../../utils/coerceType.js';
@@ -53,6 +53,7 @@ export class MCPToolCallNodeImpl extends NodeImpl<MCPToolCallNode> {
         version: '1.0.0',
         transportType: 'stdio',
         serverUrl: 'http://localhost:8080/mcp',
+				headers: '',
         serverId: '',
         toolName: '',
         toolArguments: dedent`
@@ -165,18 +166,25 @@ export class MCPToolCallNodeImpl extends NodeImpl<MCPToolCallNode> {
         label: 'Tool ID',
         dataKey: 'toolCallId',
         useInputToggleDataKey: 'useToolCallIdInput',
-        helperMessage: 'The name for the MCP Tool Call',
+        helperMessage: 'The ID associated with the tool call',
       },
     ];
 
     if (this.data.transportType === 'http') {
-      editors.push({
-        type: 'string',
-        label: 'Server URL',
-        dataKey: 'serverUrl',
-        useInputToggleDataKey: 'useServerUrlInput',
-        helperMessage: 'The endpoint URL for the MCP server to connect',
-      });
+			editors.push({
+				type: 'string',
+				label: 'Server URL',
+				dataKey: 'serverUrl',
+				useInputToggleDataKey: 'useServerUrlInput',
+        helperMessage: 'The base URL endpoint for the MCP server with `/mcp`',
+			},
+			{
+				type: 'code',
+				label: 'Headers',
+				dataKey: 'headers',
+				useInputToggleDataKey: 'useHeadersInput',
+				language: 'json',
+			});
     } else if (this.data.transportType === 'stdio') {
       const serverOptions = await getServerOptions(context);
 
@@ -194,14 +202,20 @@ export class MCPToolCallNodeImpl extends NodeImpl<MCPToolCallNode> {
 
   getBody(context: RivetUIContext): string {
     let base;
+		let headers = '';
     if (this.data.transportType === 'http') {
       base = this.data.useServerUrlInput ? '(Using Server URL Input)' : this.data.serverUrl;
+			headers = this.data.useHeadersInput
+          ? '\nHeaders: (Using Input)'
+          : this.data.headers?.trim()
+            ? `\nHeaders: ${this.data.headers}`
+            : '';
     } else {
       base = `Server ID: ${this.data.serverId || '(None)'}`;
     }
     const namePart = `Name: ${this.data.name}`;
     const versionPart = `Version: ${this.data.version}`;
-    const parts = [namePart, versionPart, base];
+    const parts = [namePart, versionPart, base, headers];
 
     if (context.executor !== 'nodejs') {
       parts.push('(Requires Node Executor)');
@@ -224,9 +238,7 @@ export class MCPToolCallNodeImpl extends NodeImpl<MCPToolCallNode> {
   async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
     const name = getInputOrData(this.data, inputs, 'name', 'string');
     const version = getInputOrData(this.data, inputs, 'version', 'string');
-
     const toolName = getInputOrData(this.data, inputs, 'toolName', 'string');
-
     const toolCallId = getInputOrData(this.data, inputs, 'toolCallId', 'string');
 
     let toolArguments;
@@ -281,7 +293,21 @@ export class MCPToolCallNodeImpl extends NodeImpl<MCPToolCallNode> {
           );
         }
 
-        toolResponse = await context.mcpProvider.httpToolCall({ name, version }, serverUrl, toolCall);
+				let headers: Record<string, string> | undefined;
+				if (this.data.useHeadersInput) {
+					const headersInput = inputs['headers' as PortId];
+					if (headersInput?.type === 'string') {
+						headers = JSON.parse(headersInput!.value);
+					} else if (headersInput?.type === 'object') {
+						headers = headersInput!.value as Record<string, string>;
+					} else {
+						headers = coerceType(headersInput, 'object') as Record<string, string>;
+					}
+				} else if (this.data.headers?.trim()) {
+					headers = JSON.parse(this.data.headers);
+				}
+
+        toolResponse = await context.mcpProvider.httpToolCall({ name, version }, serverUrl, headers, toolCall);
       } else if (transportType === 'stdio') {
         const serverId = this.data.serverId ?? '';
 

@@ -133,14 +133,22 @@ export class MCPError extends Error {
  */
 
 export interface MCPProvider {
-  getHTTPTools(clientConfig: { name: string; version: string }, serverUrl: string): Promise<MCP.Tool[]>;
+  getHTTPTools(
+		clientConfig: { name: string; version: string },
+		serverUrl: string,
+		headers: Record<string, string> | undefined
+	): Promise<MCP.Tool[]>;
 
   getStdioTools(
     clientConfig: { name: string; version: string },
     serverConfig: MCP.ServerConfigWithId,
   ): Promise<MCP.Tool[]>;
 
-  getHTTPrompts(clientConfig: { name: string; version: string }, serverUrl: string): Promise<MCP.Prompt[]>;
+  getHTTPrompts(
+		clientConfig: { name: string; version: string },
+		serverUrl: string,
+		headers: Record<string, string> | undefined
+	): Promise<MCP.Prompt[]>;
 
   getStdioPrompts(
     clientConfig: { name: string; version: string },
@@ -150,6 +158,7 @@ export interface MCPProvider {
   httpToolCall(
     clientConfig: { name: string; version: string },
     serverUrl: string,
+		headers: Record<string, string> | undefined,
     toolCall: MCP.ToolCallRequest,
   ): Promise<MCP.ToolCallResponse>;
 
@@ -162,6 +171,7 @@ export interface MCPProvider {
   getHTTPrompt(
     clientConfig: { name: string; version: string },
     serverUrl: string,
+		headers: Record<string, string> | undefined,
     getPromptRequest: MCP.GetPromptRequest,
   ): Promise<MCP.GetPromptResponse>;
 

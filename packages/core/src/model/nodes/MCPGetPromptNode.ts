@@ -10,7 +10,7 @@ import { NodeImpl, type NodeUIData } from '../NodeImpl.js';
 import { nodeDefinition } from '../NodeDefinition.js';
 import { type Inputs, type Outputs } from '../GraphProcessor.js';
 
-import { type EditorDefinition, type InternalProcessContext } from '../../index.js';
+import { coerceType, type EditorDefinition, type InternalProcessContext } from '../../index.js';
 
 import { MCPError, MCPErrorType, type MCP } from '../../integrations/mcp/MCPProvider.js';
 
@@ -50,6 +50,7 @@ export class MCPGetPromptNodeImpl extends NodeImpl<MCPGetPromptNode> {
         version: '1.0.0',
         transportType: 'stdio',
         serverUrl: 'http://localhost:8080/mcp',
+				headers: '',
         serverId: '',
         promptName: '',
         promptArguments: dedent`
@@ -144,13 +145,20 @@ export class MCPGetPromptNodeImpl extends NodeImpl<MCPGetPromptNode> {
     ];
 
     if (this.data.transportType === 'http') {
-      editors.push({
-        type: 'string',
-        label: 'Server URL',
-        dataKey: 'serverUrl',
-        useInputToggleDataKey: 'useServerUrlInput',
-        helperMessage: 'The endpoint URL for the MCP server to connect',
-      });
+			editors.push({
+				type: 'string',
+				label: 'Server URL',
+				dataKey: 'serverUrl',
+				useInputToggleDataKey: 'useServerUrlInput',
+        helperMessage: 'The base URL endpoint for the MCP server with `/mcp`',
+			},
+			{
+				type: 'code',
+				label: 'Headers',
+				dataKey: 'headers',
+				useInputToggleDataKey: 'useHeadersInput',
+				language: 'json',
+			});
     } else if (this.data.transportType === 'stdio') {
       const serverOptions = await getServerOptions(context);
 
@@ -168,14 +176,20 @@ export class MCPGetPromptNodeImpl extends NodeImpl<MCPGetPromptNode> {
 
   getBody(context: RivetUIContext): string {
     let base;
+		let headers = '';
     if (this.data.transportType === 'http') {
       base = this.data.useServerUrlInput ? '(Using Server URL Input)' : this.data.serverUrl;
+			headers = this.data.useHeadersInput
+          ? '\nHeaders: (Using Input)'
+          : this.data.headers?.trim()
+            ? `\nHeaders: ${this.data.headers}`
+            : '';
     } else {
       base = `Server ID: ${this.data.serverId || '(None)'}`;
     }
     const namePart = `Name: ${this.data.name}`;
     const versionPart = `Version: ${this.data.version}`;
-    const parts = [namePart, versionPart, base];
+    const parts = [namePart, versionPart, base, headers];
 
     if (context.executor !== 'nodejs') {
       parts.push('(Requires Node Executor)');
@@ -254,7 +268,21 @@ export class MCPGetPromptNodeImpl extends NodeImpl<MCPGetPromptNode> {
           );
         }
 
-        getPromptResponse = await context.mcpProvider.getHTTPrompt({ name, version }, serverUrl, getPromptRequest);
+				let headers: Record<string, string> | undefined;
+				if (this.data.useHeadersInput) {
+					const headersInput = inputs['headers' as PortId];
+					if (headersInput?.type === 'string') {
+						headers = JSON.parse(headersInput!.value);
+					} else if (headersInput?.type === 'object') {
+						headers = headersInput!.value as Record<string, string>;
+					} else {
+						headers = coerceType(headersInput, 'object') as Record<string, string>;
+					}
+				} else if (this.data.headers?.trim()) {
+					headers = JSON.parse(this.data.headers);
+				}
+
+        getPromptResponse = await context.mcpProvider.getHTTPrompt({ name, version }, serverUrl, headers, getPromptRequest);
       } else if (transportType === 'stdio') {
         const serverId = this.data.serverId ?? '';
 

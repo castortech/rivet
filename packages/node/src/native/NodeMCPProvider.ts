@@ -9,16 +9,27 @@ export class NodeMCPProvider implements MCPProvider {
   /**
    * HTTP
    */
-  async #getHTTPClient(clientConfig: { name: string; version: string }, serverUrl: string) {
+  async #getHTTPClient(
+		clientConfig: { name: string; version: string },
+		serverUrl: string,
+		headers: Record<string, string> | undefined
+	) {
     const url = new URL(serverUrl);
 
     try {
       const client = new Client(clientConfig);
-
       let transport: StreamableHTTPClientTransport | SSEClientTransport;
 
       try {
-        transport = new StreamableHTTPClientTransport(url);
+				if (headers) {
+					transport = new StreamableHTTPClientTransport(url, {
+						requestInit: {
+							headers
+						}
+					});
+				} else {
+					transport = new StreamableHTTPClientTransport(url)
+				};
         await client.connect(transport);
       } catch (err) {
         const sseTransport = new SSEClientTransport(url);
@@ -38,10 +49,11 @@ export class NodeMCPProvider implements MCPProvider {
   async httpToolCall(
     clientConfig: { name: string; version: string },
     serverUrl: string,
+		headers: Record<string, string> | undefined,
     toolCall: MCP.ToolCallRequest,
   ): Promise<MCP.ToolCallResponse> {
     try {
-      const client = await this.#getHTTPClient(clientConfig, serverUrl);
+      const client = await this.#getHTTPClient(clientConfig, serverUrl, headers);
 
       const response = await this.#callTool(client, toolCall);
       await client.close();
@@ -52,9 +64,13 @@ export class NodeMCPProvider implements MCPProvider {
     }
   }
 
-  async getHTTPTools(clientConfig: { name: string; version: string }, serverUrl: string): Promise<MCP.Tool[]> {
+  async getHTTPTools(
+		clientConfig: { name: string; version: string },
+		serverUrl: string,
+		headers: Record<string, string> | undefined
+	): Promise<MCP.Tool[]> {
     try {
-      const client = await this.#getHTTPClient(clientConfig, serverUrl);
+      const client = await this.#getHTTPClient(clientConfig, serverUrl, headers);
 
       const tools = await this.#getTools(client);
       await client.close();
@@ -65,9 +81,13 @@ export class NodeMCPProvider implements MCPProvider {
     }
   }
 
-  async getHTTPrompts(clientConfig: { name: string; version: string }, serverUrl: string): Promise<MCP.Prompt[]> {
+  async getHTTPrompts(
+		clientConfig: { name: string; version: string },
+		serverUrl: string,
+		headers: Record<string, string> | undefined
+	): Promise<MCP.Prompt[]> {
     try {
-      const client = await this.#getHTTPClient(clientConfig, serverUrl);
+      const client = await this.#getHTTPClient(clientConfig, serverUrl, headers);
 
       const prompts = await this.#getPrompts(client);
       await client.close();
@@ -81,11 +101,11 @@ export class NodeMCPProvider implements MCPProvider {
   async getHTTPrompt(
     clientConfig: { name: string; version: string },
     serverUrl: string,
+		headers: Record<string, string> | undefined,
     getPromptRequest: MCP.GetPromptRequest,
   ): Promise<MCP.GetPromptResponse> {
     try {
-      const client = await this.#getHTTPClient(clientConfig, serverUrl);
-
+      const client = await this.#getHTTPClient(clientConfig, serverUrl, headers);
       const prompt = await this.#getPrompt(client, getPromptRequest);
       await client.close();
 

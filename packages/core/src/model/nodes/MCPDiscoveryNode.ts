@@ -11,8 +11,7 @@ import {
 } from '../../index.js';
 
 import { MCPError, MCPErrorType, type MCP } from '../../integrations/mcp/MCPProvider.js';
-
-import { dedent, getInputOrData } from '../../utils/index.js';
+import { coerceType, dedent, getInputOrData } from '../../utils/index.js';
 import { nodeDefinition } from '../NodeDefinition.js';
 import type { RivetUIContext } from '../RivetUIContext.js';
 import { getServerHelperMessage, getServerOptions, loadMCPConfiguration } from '../../integrations/mcp/MCPUtils.js';
@@ -38,6 +37,7 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
         version: '1.0.0',
         transportType: 'stdio',
         serverUrl: 'http://localhost:8080/mcp',
+				headers: '',
         serverId: '',
         useNameInput: false,
         useVersionInput: false,
@@ -119,13 +119,20 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
     ];
 
     if (this.data.transportType === 'http') {
-      editors.push({
-        type: 'string',
-        label: 'Server URL',
-        dataKey: 'serverUrl',
-        useInputToggleDataKey: 'useServerUrlInput',
+			editors.push({
+				type: 'string',
+				label: 'Server URL',
+				dataKey: 'serverUrl',
+				useInputToggleDataKey: 'useServerUrlInput',
         helperMessage: 'The base URL endpoint for the MCP server with `/mcp`',
-      });
+			},
+			{
+				type: 'code',
+				label: 'Headers',
+				dataKey: 'headers',
+				useInputToggleDataKey: 'useHeadersInput',
+				language: 'json',
+			});
     } else if (this.data.transportType === 'stdio') {
       const serverOptions = await getServerOptions(context);
 
@@ -142,14 +149,20 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
 
   getBody(context: RivetUIContext): string {
     let base;
+		let headers = '';
     if (this.data.transportType === 'http') {
       base = this.data.useServerUrlInput ? '(Using Server URL Input)' : this.data.serverUrl;
+			headers = this.data.useHeadersInput
+          ? '\nHeaders: (Using Input)'
+          : this.data.headers?.trim()
+            ? `\nHeaders: ${this.data.headers}`
+            : '';
     } else {
       base = `Server ID: ${this.data.serverId || '(None)'}`;
     }
     const namePart = `Name: ${this.data.name}`;
     const versionPart = `Version: ${this.data.version}`;
-    const parts = [namePart, versionPart, base];
+    const parts = [namePart, versionPart, base, headers];
 
     if (context.executor !== 'nodejs') {
       parts.push('(Requires Node Executor)');
@@ -195,8 +208,22 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
           );
         }
 
-        tools = await context.mcpProvider.getHTTPTools({ name, version }, serverUrl);
-        prompts = await context.mcpProvider.getHTTPrompts({ name, version }, serverUrl);
+				let headers: Record<string, string> | undefined;
+				if (this.data.useHeadersInput) {
+					const headersInput = inputs['headers' as PortId];
+					if (headersInput?.type === 'string') {
+						headers = JSON.parse(headersInput!.value);
+					} else if (headersInput?.type === 'object') {
+						headers = headersInput!.value as Record<string, string>;
+					} else {
+						headers = coerceType(headersInput, 'object') as Record<string, string>;
+					}
+				} else if (this.data.headers?.trim()) {
+					headers = JSON.parse(this.data.headers);
+				}
+
+        tools = await context.mcpProvider.getHTTPTools({ name, version }, serverUrl, headers);
+        prompts = await context.mcpProvider.getHTTPrompts({ name, version }, serverUrl, headers);
       } else if (transportType === 'stdio') {
         const serverId = this.data.serverId ?? '';
 
