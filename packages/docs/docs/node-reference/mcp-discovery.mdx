@@ -56,7 +56,7 @@ The MCP Discovery Node supports two communication modes:
 | Title   | Data Type        | Description                            | Notes                                                                                |
 | ------- | ---------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
 | Tools   | `gpt-function[]` | MCP tools returned by the MCP server   | Returned from the `tools/list` method. Only availabe when Output Tools is enabled.   |
-| Prompts | `object`         | MCP prompts returned by the MCP server | Returned from the `tools/list` method. Only availabe when Output Prompts is enabled. |
+| Prompts | `object`         | MCP prompts returned by the MCP server | Returned from the `prompts/list` method. Only availabe when Output Prompts is enabled. |
 
 </TabItem>
 
@@ -171,7 +171,7 @@ A: No. All MCP nodes use the official MCP Node SDK and require the Node Executor
 A:
 
 For STDIO mode, authentication details should be included in your server configuration.
-For HTTP mode, this will be a follow-up feature and not accessible at the moment.
+For HTTP mode, Use custom headers similar to what you would do in a chat node.
 
 **Q: Can I use multiple MCP servers in the same graph?**
 
