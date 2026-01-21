@@ -108,6 +108,7 @@ export type GptFunction = {
   namespace?: string;
   description: string;
   parameters: object;
+  config?: object;  //Mainly intended for MCP-specific configuration
   strict: boolean;
 };
 

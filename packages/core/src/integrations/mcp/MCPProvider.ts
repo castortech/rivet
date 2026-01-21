@@ -5,6 +5,15 @@
 export namespace MCP {
   export type TransportType = 'stdio' | 'http';
 
+	export type MCPConfig = {
+		name: string;
+		version: string;
+		transportType: MCP.TransportType;
+		serverUrl?: string;
+		serverId?: string;
+		headers?: Record<string, string>;
+	}
+
   export interface ServerConfig {
     command: string;
     args?: string[];

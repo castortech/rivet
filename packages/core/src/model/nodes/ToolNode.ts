@@ -199,6 +199,7 @@ export class GptFunctionNodeImpl extends NodeImpl<GptFunctionNode> {
       ['function' as PortId]: {
         type: 'gpt-function',
         value: {
+					namespace: 'internal',
           name,
           description,
           parameters: schema as object,

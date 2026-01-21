@@ -196,6 +196,15 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
         throw new Error('MCP Provider not found');
       }
 
+			const config: MCP.MCPConfig = {
+				name,
+				version,
+				transportType,
+				// serverUrl: this.data.serverUrl,
+				serverId: this.data.serverId,
+				// headers: this.data.headers?.trim()
+			};
+
       if (transportType === 'http') {
         const serverUrl = getInputOrData(this.data, inputs, 'serverUrl', 'string');
         if (!serverUrl || serverUrl === '') {
@@ -222,11 +231,12 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
 					headers = JSON.parse(this.data.headers);
 				}
 
+				config.serverUrl = serverUrl;
+				config.headers = headers;
         tools = await context.mcpProvider.getHTTPTools({ name, version }, serverUrl, headers);
         prompts = await context.mcpProvider.getHTTPrompts({ name, version }, serverUrl, headers);
       } else if (transportType === 'stdio') {
         const serverId = this.data.serverId ?? '';
-
         const mcpConfig = await loadMCPConfiguration(context);
         if (!mcpConfig.mcpServers[serverId]) {
           throw new MCPError(MCPErrorType.SERVER_NOT_FOUND, `Server ${serverId} not found in MCP config`);
@@ -244,9 +254,11 @@ class MCPDiscoveryNodeImpl extends NodeImpl<MCPDiscoveryNode> {
       const output: Outputs = {};
 
       const gptFunctions: GptFunction[] = tools.map((tool) => ({
+				namespace: 'mcp',
         name: tool.name,
         description: tool.description ?? '',
         parameters: tool.inputSchema,
+				config: config,
         strict: false,
       }));
 
