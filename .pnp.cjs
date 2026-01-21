@@ -94,7 +94,7 @@ const RAW_RUNTIME_STATE =
           ["tsx", "npm:4.20.3"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["yargs", "npm:17.7.2"],\
-          ["zx", "npm:8.5.5"]\
+          ["zx", "npm:8.8.5"]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -7712,7 +7712,7 @@ const RAW_RUNTIME_STATE =
           ["tsx", "npm:4.20.3"],\
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["yargs", "npm:17.7.2"],\
-          ["zx", "npm:8.5.5"]\
+          ["zx", "npm:8.8.5"]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -29815,10 +29815,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["zx", [\
-      ["npm:8.5.5", {\
-        "packageLocation": "./.yarn/cache/zx-npm-8.5.5-35bbdc8536-2da68c39c5.zip/node_modules/zx/",\
+      ["npm:8.8.5", {\
+        "packageLocation": "./.yarn/cache/zx-npm-8.8.5-7705a94826-29e68a7a2f.zip/node_modules/zx/",\
         "packageDependencies": [\
-          ["zx", "npm:8.5.5"]\
+          ["zx", "npm:8.8.5"]\
         ],\
         "linkType": "HARD"\
       }]\
