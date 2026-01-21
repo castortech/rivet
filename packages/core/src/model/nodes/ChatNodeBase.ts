@@ -41,6 +41,7 @@ export type ChatNodeConfigData = {
   user?: string;
   numberOfChoices?: number;
   endpoint?: string;
+  apikey?: string;
   overrideModel?: string;
   overrideMaxTokens?: number;
   headers?: { key: string; value: string }[];
@@ -77,6 +78,7 @@ export type ChatNodeData = ChatNodeConfigData & {
   useUserInput?: boolean;
   useNumberOfChoicesInput?: boolean;
   useEndpointInput?: boolean;
+  useApiKeyInput?: boolean;
   useHeadersInput?: boolean;
   useSeedInput?: boolean;
   useToolChoiceInput?: boolean;
@@ -143,6 +145,16 @@ export const ChatNodeBase = {
         title: 'Endpoint',
         description:
           'The endpoint to use for the OpenAI API. You can use this to replace with any OpenAI-compatible API. Leave blank for the default: https://api.openai.com/api/v1/chat/completions',
+      });
+    }
+
+    if (data.useApiKeyInput) {
+      inputs.push({
+        dataType: 'string',
+        id: 'apikey' as PortId,
+        title: 'API Key',
+        description:
+          'The API Key to use for the OpenAI API. You can use this to replace the default OpenAI key in settings. Leave blank for the default key.',
       });
     }
 
@@ -746,6 +758,14 @@ export const ChatNodeBase = {
           },
           {
             type: 'string',
+            label: 'API Key',
+            dataKey: 'apikey',
+            useInputToggleDataKey: 'useApiKeyInput',
+            helperMessage:
+							'The API Key to use for the OpenAI API. You can use this to replace the default OpenAI key in settings. Leave blank for the default key.',
+          },
+          {
+            type: 'string',
             label: 'Custom Model',
             dataKey: 'overrideModel',
             helperMessage: 'Overrides the model selected above with a custom string for the model.',
@@ -848,6 +868,7 @@ export const ChatNodeBase = {
     const frequencyPenalty = getInputOrData(data, inputs, 'frequencyPenalty', 'number');
     const numberOfChoices = getInputOrData(data, inputs, 'numberOfChoices', 'number');
     const endpoint = getInputOrData(data, inputs, 'endpoint');
+    const apiKey = getInputOrData(data, inputs, 'apikey');
     const overrideModel = getInputOrData(data, inputs, 'overrideModel');
     const seed = getInputOrData(data, inputs, 'seed', 'number');
     const responseFormat = getInputOrData(data, inputs, 'responseFormat') as 'text' | 'json' | 'json_schema' | '';
@@ -977,6 +998,9 @@ export const ChatNodeBase = {
       ...resolvedEndpointAndHeaders.headers,
     });
 
+    // Resolve to final endpoint if configured in ProcessContext
+    const configuredApiKey = apiKey || context.settings.openAiKey || '';
+
     let inputTokenCount: number = 0;
 
     const tokenizerInfo: TokenizerCallInfo = {
@@ -1094,7 +1118,7 @@ export const ChatNodeBase = {
           if (isO1Beta || audio) {
             const response = await chatCompletions({
               auth: {
-                apiKey: context.settings.openAiKey ?? '',
+                apiKey: configuredApiKey,
                 organization: context.settings.openAiOrganization,
               },
               headers: allAdditionalHeaders,
@@ -1207,7 +1231,7 @@ export const ChatNodeBase = {
 
           const chunks = streamChatCompletions({
             auth: {
-              apiKey: context.settings.openAiKey ?? '',
+              apiKey: configuredApiKey,
               organization: context.settings.openAiOrganization,
             },
             headers: allAdditionalHeaders,
