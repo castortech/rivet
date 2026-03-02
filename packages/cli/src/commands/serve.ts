@@ -430,7 +430,7 @@ function createProcessGraph(ctx: ServerContext) {
 	  const outputs = await runGraph(execOpts as Parameters<typeof runGraph>[0])
 
 		if (localCtx.logActivity) {
-			console.log(chalk.green('Run graph outputs,', outputs));
+			console.log(chalk.green('Run graph outputs,', printObject(outputs)));
 		}
 
   	return new Response(JSON.stringify(outputs), {
@@ -745,4 +745,27 @@ async function validateProjectRootDirectory(directory: string | undefined): Prom
 
   await throwIfMissingFile(directory);
   return (await stat(directory)).isDirectory();
+}
+
+export function printObject(obj: unknown): string {
+	const seen = new WeakSet()
+
+	return JSON.stringify(
+		obj,
+		(_, value) => {
+			if (typeof value === 'function') {
+				return `[Function: ${value.name || 'anonymous'}]`
+			}
+
+			if (typeof value === 'object' && value !== null) {
+				if (seen.has(value)) {
+					return '[Circular]'
+				}
+				seen.add(value)
+			}
+
+			return value
+		},
+		2 // Indentation level for pretty-printing
+	)
 }
