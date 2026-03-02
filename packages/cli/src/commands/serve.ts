@@ -429,6 +429,10 @@ function createProcessGraph(ctx: ServerContext) {
 
 	  const outputs = await runGraph(execOpts as Parameters<typeof runGraph>[0])
 
+		if (localCtx.logActivity) {
+			console.log(chalk.green('Run graph outputs,', outputs));
+		}
+
   	return new Response(JSON.stringify(outputs), {
     	headers: {
       	'Content-Type': 'application/json'
