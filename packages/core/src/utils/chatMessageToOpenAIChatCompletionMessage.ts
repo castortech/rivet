@@ -48,6 +48,15 @@ export async function chatMessageToOpenAIChatCompletionMessage(
             return { type: 'text', text: part };
           }
 
+					if (part.type === 'file') {
+            return {
+							type: 'file',
+							filename: part.filename || 'file.pdf',
+				 			mediaType: part.mediaType,
+              data: part.data.toString()
+						};
+          }
+
           const url =
             part.type === 'url' ? part.url : `data:${part.mediaType};base64,${await uint8ArrayToBase64(part.data)}`;
 

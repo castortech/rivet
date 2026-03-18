@@ -1,6 +1,7 @@
 import { orderBy } from 'lodash-es';
 import { DEFAULT_CHAT_NODE_TIMEOUT } from './defaults.js';
 import fetchEventSource from './fetchEventSource.js';
+import type { SupportedDocumentMediaTypes } from '../model/DataValue.js';
 
 // https://github.com/openai/openai-node/issues/18#issuecomment-1518715285
 
@@ -286,7 +287,8 @@ export type ChatCompletionRequestUserMessage = {
 
 export type ChatCompletionRequestUserMessageContent =
   | ChatCompletionRequestUserMessageTextContent
-  | ChatCompletionRequestUserMessageImageContent;
+  | ChatCompletionRequestUserMessageImageContent
+	| ChatCompletionRequestUserMessageFileContent;
 
 export type ChatCompletionRequestUserMessageTextContent = {
   type: 'text';
@@ -303,6 +305,13 @@ export type ChatCompletionRequestUserMessageImageContent = {
      */
     detail?: 'low' | 'high';
   };
+};
+
+export type ChatCompletionRequestUserMessageFileContent = {
+  type: 'file';
+  filename: string | undefined;
+  mediaType: SupportedDocumentMediaTypes;
+  data: string;
 };
 
 export type ChatCompletionRequestAssistantMessage = {

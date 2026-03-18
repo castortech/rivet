@@ -68,6 +68,12 @@ export type ChatMessageMessagePart =
   | { type: 'image'; mediaType: SupportedImageMediaTypes; data: Uint8Array }
   | { type: 'url'; url: string }
   | {
+      type: 'file';
+      filename: string | undefined;
+      mediaType: SupportedDocumentMediaTypes;
+      data: string;
+    }
+  | {
       type: 'document';
       title: string | undefined;
       context: string | undefined;
