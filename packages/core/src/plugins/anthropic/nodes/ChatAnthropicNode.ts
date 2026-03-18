@@ -972,6 +972,8 @@ async function chatMessageContentToClaude3ChatMessage(
       };
     case 'url':
       throw new Error('unable to convert urls for Claude');
+    case 'file':
+      throw new Error('unable to convert files for Claude');
     case 'document':
       return {
         type: 'document',
