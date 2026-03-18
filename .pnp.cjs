@@ -559,7 +559,7 @@ const RAW_RUNTIME_STATE =
           ["@floating-ui/react", "virtual:0a7f79bc4b6d65c8f0b2890deb810a17fab1021cff94fc482a413136ae692ad52a8f37199470931f035195697859a125f3b56a7265b1fc15083395a71d7e6725#npm:0.26.28"],\
           ["@ironclad/rivet-core", [\
             "@alpic80/rivet-core",\
-            "npm:1.24.2-aidon.12"\
+            "workspace:packages/core"\
           ]],\
           ["@ironclad/trivet", "workspace:packages/trivet"],\
           ["@recoiljs/refine", "npm:0.1.1"],\
@@ -701,53 +701,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@alpic80/rivet-core", [\
-      ["npm:1.24.2-aidon.12", {\
-        "packageLocation": "./.yarn/cache/@alpic80-rivet-core-npm-1.24.2-aidon.12-9dbedc74ce-de54980763.zip/node_modules/@alpic80/rivet-core/",\
-        "packageDependencies": [\
-          ["@alpic80/rivet-core", "npm:1.24.2-aidon.12"],\
-          ["@gentrace/core", "npm:2.8.3"],\
-          ["@google-cloud/vertexai", "npm:0.1.3"],\
-          ["@google/genai", "npm:0.12.0"],\
-          ["@huggingface/inference", "npm:4.13.0"],\
-          ["@ironclad/rivet-core", [\
-            "@alpic80/rivet-core",\
-            "npm:1.24.2-aidon.12"\
-          ]],\
-          ["assemblyai", "npm:4.13.2"],\
-          ["autoevals", "npm:0.0.26"],\
-          ["cron-parser", "npm:4.9.0"],\
-          ["crypto-js", "npm:4.2.0"],\
-          ["emittery", "npm:1.1.0"],\
-          ["emittery-0-13", [\
-            "emittery",\
-            "npm:0.13.1"\
-          ]],\
-          ["gpt-tokenizer", "npm:2.9.0"],\
-          ["jsonpath-plus", "npm:10.3.0"],\
-          ["lodash-es", "npm:4.17.21"],\
-          ["mdast-util-gfm-table", "npm:2.0.0"],\
-          ["mdast-util-to-markdown", "npm:2.1.2"],\
-          ["minimatch", "npm:9.0.5"],\
-          ["nanoid", "npm:3.3.11"],\
-          ["openai", "virtual:863419c07dd8dc2bece6230acabe3ccb05127119660152dfb48c3decf6a2eb250ad0408e9249ee291a70f8799a5ae1fa8d6337a50e20aca2a794a5e253b969d8#npm:4.104.0"],\
-          ["p-queue", "npm:7.4.1"],\
-          ["p-queue-6", [\
-            "p-queue",\
-            "npm:6.6.2"\
-          ]],\
-          ["p-retry", "npm:6.2.1"],\
-          ["p-retry-4", [\
-            "p-retry",\
-            "npm:4.6.2"\
-          ]],\
-          ["safe-stable-stringify", "npm:2.5.0"],\
-          ["ts-dedent", "npm:2.2.0"],\
-          ["ts-pattern", "npm:5.7.1"],\
-          ["type-fest", "npm:4.41.0"],\
-          ["yaml", "npm:2.8.0"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["workspace:packages/core", {\
         "packageLocation": "./packages/core/",\
         "packageDependencies": [\

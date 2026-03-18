@@ -358,6 +358,7 @@ export const PromptDesigner: FC<PromptDesignerProps> = ({ onClose }) => {
           isArrayDataValue(val as DataValue) ? arrayizeDataValue(val as ScalarDataValue)[0] : val,
         ) as InputsOrOutputsWithRefs;
       }
+
       const { messages } = getChatNodeMessages(inputData as Inputs);
       setMessages({
         messages,

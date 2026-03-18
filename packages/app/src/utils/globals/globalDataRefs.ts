@@ -35,6 +35,7 @@ function getSizeOfChatMessage(value: ChatMessage): any {
     (acc, part) =>
       match(part)
         .with(P.string, (p) => (acc as number) + p.length)
+        .with({ type: 'file' }, (p) => acc + p.data.length)
         .with({ type: 'document' }, (p) => acc + p.data.byteLength)
         .with({ type: 'image' }, (p) => acc + p.data.byteLength)
         .with({ type: 'url' }, (p) => acc + p.url.length)

@@ -352,6 +352,18 @@ const RenderChatMessagePart: FC<{ part: ChatMessageMessagePart; renderMarkdown?:
     .with({ type: 'url' }, (part) => {
       return <img className="chat-message-url-image" src={part.url} alt={part.url} />;
     })
+    .with({ type: 'file' }, (part) => {
+      const { data, mediaType, filename } = part;
+
+      return (
+        <div>
+          <p>
+            {filename ? `File: ${filename}` : 'File'} ({mediaType})
+          </p>
+          Size: {data.length > 0 ? prettyBytes(data.length) : '0 bytes'}
+        </div>
+      );
+    })
     .with({ type: 'document' }, (part) => {
       const { data, mediaType, context, title, enableCitations } = part;
 
