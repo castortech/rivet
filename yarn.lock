@@ -492,8 +492,8 @@ __metadata:
     "@alpic80/rivet-core": "workspace:^"
     "@alpic80/rivet-node": "workspace:^"
     "@hono/node-server": "npm:^1.13.8"
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.12"
-    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.10"
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.13"
+    "@ironclad/rivet-node": "npm:@alpic80/rivet-node@1.24.2-aidon.11"
     "@types/dotenv": "npm:^8.2.3"
     "@types/yargs": "npm:^17.0.29"
     "@typescript-eslint/eslint-plugin": "npm:^8.24.0"
@@ -514,7 +514,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@alpic80/rivet-core@workspace:^, @alpic80/rivet-core@workspace:packages/core, @ironclad/rivet-core@npm:@alpic80/rivet-core@1.24.2-aidon.12":
+"@alpic80/rivet-core@workspace:^, @alpic80/rivet-core@workspace:packages/core, @ironclad/rivet-core@npm:@alpic80/rivet-core@1.24.2-aidon.13":
   version: 0.0.0-use.local
   resolution: "@alpic80/rivet-core@workspace:packages/core"
   dependencies:
@@ -522,7 +522,7 @@ __metadata:
     "@google-cloud/vertexai": "npm:^0.1.3"
     "@google/genai": "npm:^0.12.0"
     "@huggingface/inference": "npm:^4.13.0"
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.12"
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.13"
     "@swc/core": "npm:^1.3.94"
     "@types/crypto-js": "npm:^4.1.3"
     "@types/eslint": "npm:^8.44.6"
@@ -570,12 +570,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@alpic80/rivet-node@workspace:^, @alpic80/rivet-node@workspace:packages/node, @ironclad/rivet-node@npm:@alpic80/rivet-node@1.24.2-aidon.10":
+"@alpic80/rivet-node@workspace:^, @alpic80/rivet-node@workspace:packages/node, @ironclad/rivet-node@npm:@alpic80/rivet-node@1.24.2-aidon.11":
   version: 0.0.0-use.local
   resolution: "@alpic80/rivet-node@workspace:packages/node"
   dependencies:
     "@alpic80/rivet-core": "workspace:^"
-    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.12"
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.13"
     "@modelcontextprotocol/sdk": "npm:^1.10.2"
     "@swc/core": "npm:^1.3.94"
     "@types/eslint": "npm:^8.44.6"
@@ -4719,6 +4719,42 @@ __metadata:
     typescript: "npm:^5.7.3"
   languageName: unknown
   linkType: soft
+
+"@ironclad/rivet-core@npm:@alpic80/rivet-core@1.24.2-aidon.12":
+  version: 1.24.2-aidon.12
+  resolution: "@alpic80/rivet-core@npm:1.24.2-aidon.12"
+  dependencies:
+    "@gentrace/core": "npm:^2.2.5"
+    "@google-cloud/vertexai": "npm:^0.1.3"
+    "@google/genai": "npm:^0.12.0"
+    "@huggingface/inference": "npm:^4.13.0"
+    "@ironclad/rivet-core": "npm:@alpic80/rivet-core@1.24.2-aidon.12"
+    assemblyai: "npm:^4.6.0"
+    autoevals: "npm:^0.0.26"
+    cron-parser: "npm:^4.9.0"
+    crypto-js: "npm:^4.2.0"
+    emittery: "npm:^1.0.1"
+    emittery-0-13: "npm:emittery@^0.13.1"
+    gpt-tokenizer: "npm:^2.1.2"
+    jsonpath-plus: "npm:^10.3.0"
+    lodash-es: "npm:^4.17.21"
+    mdast-util-gfm-table: "npm:^2.0.0"
+    mdast-util-to-markdown: "npm:^2.1.2"
+    minimatch: "npm:^9.0.3"
+    nanoid: "npm:^3.3.8"
+    openai: "npm:^4.28.4"
+    p-queue: "npm:^7.4.1"
+    p-queue-6: "npm:p-queue@^6.0.0"
+    p-retry: "npm:^6.1.0"
+    p-retry-4: "npm:p-retry@^4.0.0"
+    safe-stable-stringify: "npm:^2.4.3"
+    ts-dedent: "npm:^2.2.0"
+    ts-pattern: "npm:^5.6.2"
+    type-fest: "npm:^4.34.1"
+    yaml: "npm:^2.3.3"
+  checksum: 10/de549807630e574d21f01f89d50b3e1b762f809a023b634434fdaa2c7c7d170c4e000af1e0a9af7fcb947c0e0d43cc97bee54382551acf8a9ee6a16786635c76
+  languageName: node
+  linkType: hard
 
 "@ironclad/rivet@workspace:.":
   version: 0.0.0-use.local
