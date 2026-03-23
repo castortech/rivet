@@ -166,8 +166,7 @@ type GraphExecOptions = GraphCallOptions & { inputs: Record<string, LooseDataVal
 
 export async function serve(cliArgs: Partial<ServerContext> = {}) {
   try {
-    configDotenv();
-		debugger;
+		configDotenv();
 		const pluginSettings = await setupPlugins(Rivet as RivetType);
 
 		const args: ServerContext = {
@@ -176,15 +175,15 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			projectFile: cliArgs.projectFile ?? process.env.PROJECT_FILE,
 			dev: cliArgs.dev ?? process.env.NODE_ENV === 'development',
 			graph: cliArgs.graph ?? process.env.GRAPH,
-			allowSpecifyingGraphId: cliArgs.allowSpecifyingGraphId ?? (process.env.ALLOW_SPECIFYING_GRAPH_ID === 'true'),
+			allowSpecifyingGraphId: 'allowSpecifyingGraphId' in cliArgs ? cliArgs.allowSpecifyingGraphId! : (process.env.ALLOW_SPECIFYING_GRAPH_ID === 'true'),
 			openaiApiKey: cliArgs.openaiApiKey ?? process.env.OPENAI_API_KEY,
 			openaiEndpoint: cliArgs.openaiEndpoint ?? process.env.OPENAI_ENDPOINT,
 			openaiOrganization: cliArgs.openaiOrganization ?? process.env.OPENAI_ORGANIZATION,
-			exposeCost: cliArgs.exposeCost ?? (process.env.EXPOSE_COST === 'true'),
-			exposeUsage: cliArgs.exposeUsage ?? (process.env.EXPOSE_USAGE === 'true'),
-			logRequests: cliArgs.logRequests ?? (process.env.LOG_REQUESTS === 'true'),
-			logActivity: cliArgs.logActivity ?? (process.env.LOG_ACTIVITY === 'true'),
-			logTrace: cliArgs.logTrace ?? (process.env.LOG_TRACE === 'true'),
+			exposeCost: 'exposeCost' in cliArgs ? cliArgs.exposeCost! : (process.env.EXPOSE_COST === 'true'),
+			exposeUsage: 'exposeUsage' in cliArgs ? cliArgs.exposeUsage! : (process.env.EXPOSE_USAGE === 'true'),
+			logRequests: 'logRequests' in cliArgs ? cliArgs.logRequests! : (process.env.LOG_REQUESTS === 'true'),
+			logActivity: 'logActivity' in cliArgs ? cliArgs.logActivity! : (process.env.LOG_ACTIVITY === 'true'),
+			logTrace: 'logTrace' in cliArgs ? cliArgs.logTrace! : (process.env.LOG_TRACE === 'true'),
 			stream: cliArgs.stream ?? process.env.STREAM,
 			streamNode: cliArgs.streamNode ?? process.env.STREAM_NODE,
 			events: cliArgs.events ?? process.env.EVENTS,
