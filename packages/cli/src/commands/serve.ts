@@ -11,6 +11,8 @@ import {
   type GraphId,
   type Outputs,
   type Project,
+	NodeDatasetProvider,
+	type NodeDatasetProviderOptions,
   type LooseDataValue,
   getSingleNodeStream,
 } from '@alpic80/rivet-node';
@@ -158,6 +160,7 @@ type ServerContext = {
 
 type GraphCallOptions = ServerContext & {
   project: Project
+	projectPath: string
   graphId?: GraphId
   inputText: string
 }
@@ -198,7 +201,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			app.use('*', conditionalLogger());
 		}
 
-		let projectFilePath = '';
+		let projectPath = '';
 		let initialProject = null;
 
 		if (args.projectsRootDir) {
@@ -207,10 +210,10 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			}
 		}
 		else {
-			projectFilePath = await getProjectFile(args.projectFile);
-			initialProject = await loadProjectFromFile(projectFilePath);
+			projectPath = await getProjectFile(args.projectFile);
+			initialProject = await loadProjectFromFile(projectPath);
 
-			throwIfNoMainGraph(initialProject, args.graph, projectFilePath);
+			throwIfNoMainGraph(initialProject, args.graph, projectPath);
 			throwIfInvalidGraph(initialProject, args.graph);
 		}
 
@@ -248,9 +251,9 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 				headers[key] = value
 			})
 
-      const project = args.dev ? await loadProjectFromFile(projectFilePath) : initialProject!;
+      const project = args.dev ? await loadProjectFromFile(projectPath) : initialProject!;
       const inputText = await c.req.text();
-			return await processGraph({ project, headers, inputText });
+			return await processGraph({ project, projectPath, headers, inputText });
     });
 
     if (args.allowSpecifyingGraphId || args.projectsRootDir) {
@@ -280,6 +283,8 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 				}
 
         let project;
+				let projectPath = '';
+
 				if (args.projectsRootDir) {
 					if (!graphFile) {
 						if (args.logActivity) {
@@ -295,13 +300,14 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 						}
 						return c.text(`GraphFile ${graphFile} not found in root directory (${args.projectsRootDir})`, 400);
 					}
-					project = await loadProjectFromFile(path.join(args.projectsRootDir, graphFile));
+					projectPath = path.join(args.projectsRootDir, graphFile);
+					project = await loadProjectFromFile(projectPath);
 				} else {
-					project = args.dev || args.projectsRootDir ? await loadProjectFromFile(projectFilePath) : initialProject!;
+					project = args.dev || args.projectsRootDir ? await loadProjectFromFile(projectPath) : initialProject!;
 				}
 
 				const inputText = await c.req.text();
-				return await processGraph({ project, headers, inputText, graphId });
+				return await processGraph({ project, projectPath, headers, inputText, graphId });
       });
     }
 
@@ -331,7 +337,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 			}
 
 			console.log(
-				chalk.green(`Serving project file ${chalk.bold.white(projectFilePath)} on port ${chalk.bold.white(args.port)}.\nServing graph "${chalk.bold.white(servedGraphName)}".`)
+				chalk.green(`Serving project file ${chalk.bold.white(projectPath)} on port ${chalk.bold.white(args.port)}.\nServing graph "${chalk.bold.white(servedGraphName)}".`)
 			);
 		}
 		else {
@@ -364,6 +370,7 @@ export async function serve(cliArgs: Partial<ServerContext> = {}) {
 function createProcessGraph(ctx: ServerContext) {
   return async (opts: {
     project: Project
+		projectPath: string
     graphId?: GraphId
 		headers: Record<string, string>
     inputText: string
@@ -472,6 +479,7 @@ const parseStream = (stream: string): StreamFlags | true => {
 
 async function streamGraph({
   project,
+	projectPath,
   inputs,
   graphId,
 	pluginSettings,
@@ -487,6 +495,7 @@ async function streamGraph({
 	events
 }: {
   project: Project;
+	projectPath: string;
   inputs: Record<string, LooseDataValue>;
   graphId: GraphId | undefined;
 	pluginSettings?: Record<string, Record<string, unknown>>;
@@ -501,10 +510,15 @@ async function streamGraph({
   streamNode: string | undefined;
 	events: string | undefined;
 }): Promise<ReadableStream> {
+	const NDSOptions: NodeDatasetProviderOptions = { save: true};
+	const datasetProvider = await NodeDatasetProvider.fromProjectFile(projectPath, NDSOptions);
+
   const { run, processor, getSSEStream } = createProcessor(project, {
     inputs,
     graph: graphId,
 		pluginSettings,
+		projectPath,
+		datasetProvider,
     openAiKey: openaiApiKey,
     openAiEndpoint: openaiEndpoint,
     openAiOrganization: openaiOrganization,
@@ -569,6 +583,7 @@ async function streamGraph({
 
 async function runGraph({
   project,
+	projectPath,
   inputs,
   graphId,
 	pluginSettings,
@@ -580,6 +595,7 @@ async function runGraph({
 	logTrace
 }: {
   project: Project;
+	projectPath: string;
   inputs: Record<string, LooseDataValue>;
   graphId: GraphId | undefined;
   pluginSettings?: Record<string, Record<string, unknown>>;
@@ -590,10 +606,15 @@ async function runGraph({
   exposeUsage: boolean;
 	logTrace: boolean;
 }): Promise<Outputs> {
+	const NDSOptions: NodeDatasetProviderOptions = { save: true};
+	const datasetProvider = await NodeDatasetProvider.fromProjectFile(projectPath, NDSOptions);
+
   const { run } = createProcessor(project, {
     inputs,
     graph: graphId,
 		pluginSettings,
+		projectPath,
+		datasetProvider,
     openAiKey: openaiApiKey,
     openAiEndpoint: openaiEndpoint,
     openAiOrganization: openaiOrganization,
