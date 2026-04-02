@@ -843,7 +843,7 @@ export class GraphProcessor {
       }
 
       const startNodes = this.runToNodeIds
-        ? this.#graph.nodes.filter((node) => this.runToNodeIds?.includes(node.id))
+        ? this.#graph.nodes.filter((node) => this.runToNodeIds?.includes(node.id) || node.type === 'setGlobal')
         : this.#graph.nodes.filter((node) => this.#outputNodesFrom(node).nodes.length === 0);
 
       await this.#waitUntilUnpaused();
